@@ -9,7 +9,7 @@ import { PageSkeleton } from './Skeletons';
 import { Header, Modal } from './ui';
 
 interface Last { lat: number; lng: number; accuracy: number | null; speed: number | null; heading: number | null; recordedAt: string }
-interface Live {
+export interface Live {
   routeId: number; vehicle: string | null; driverId: number | null; driverName: string | null; departure: string;
   stops: number; done: number; current: { orderId: number; name: string; neighborhood: string; street: string; number: string } | null;
   last: Last | null; canSimulate?: boolean; simulating?: boolean;
@@ -217,7 +217,7 @@ function driverIcon(tone: Tone, heading: number | null, selected: boolean, initi
   });
 }
 
-function TrackMap({ live, selected, trail, now, follow, onSelect, onUserMove }: {
+export function TrackMap({ live, selected, trail, now, follow, onSelect, onUserMove }: {
   live: Live[]; selected: Live | null; trail: TrailPoint[]; now: number; follow: boolean; onSelect: (id: number) => void; onUserMove: () => void;
 }) {
   const el = useRef<HTMLDivElement>(null);
