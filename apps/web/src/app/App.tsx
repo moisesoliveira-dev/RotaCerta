@@ -43,7 +43,7 @@ const deferred = (content: ReactNode, fallback: ReactNode = <AppSkeleton />) => 
 const page = (content: ReactNode, shape: PageShape = 'list') => <Suspense fallback={<PageSkeleton shape={shape} />}><PageEnter>{content}</PageEnter></Suspense>;
 
 
-interface PageDef { page: Page; path: string; label: string; element: JSX.Element; hidden?: boolean }
+interface PageDef { page: Page; path: string; label: string; element: ReturnType<typeof page>; hidden?: boolean }
 
 const PAGES: PageDef[] = [
   { page: 'dashboard', path: '/gestao', label: 'Painel de gestão', element: page(<Dashboard />, 'dashboard') },

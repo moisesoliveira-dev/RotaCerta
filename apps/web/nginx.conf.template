@@ -22,6 +22,21 @@ server {
   location = /sw.js { add_header Cache-Control "no-cache"; include /etc/nginx/security-headers.conf; try_files $uri =404; }
   location = /manifest.webmanifest { add_header Cache-Control "no-cache"; include /etc/nginx/security-headers.conf; try_files $uri =404; }
 
+  # API e WebSocket na mesma origem do site. Evita bloqueio de CSP/CORS e funciona
+  # dentro da rede do Compose pelo nome do serviço, sem expor a porta ao navegador.
+  location /api/ {
+    proxy_pass http://api:3333;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 75s;
+    include /etc/nginx/security-headers.conf;
+  }
+
   # rotas do navegador (react-router) caem no index.html
   location / {
     add_header Cache-Control "no-cache";

@@ -6,8 +6,11 @@ import type { ZodType } from 'zod';
 
 export type { Session, SessionUser, Snapshot } from '@rotacerta/contracts';
 
-/** Endereço da API. Em produção vem do build (`VITE_API_URL`); local, aponta para a API de desenvolvimento. */
-export const API_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3333';
+/**
+ * Endereço da API. Vazio usa a mesma origem do site (Nginx/Vite encaminham `/api`);
+ * uma URL explícita continua disponível para implantações com API separada.
+ */
+export const API_URL: string = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '');
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) { super(message); }
@@ -100,5 +103,8 @@ export async function openSocket(): Promise<WebSocket> {
   let res = await raw('POST', '/auth/ws-ticket');
   if (res.status === 401 && await renewSession()) res = await raw('POST', '/auth/ws-ticket');
   const { ticket } = await parse(res, wsTicketResponse);
-  return new WebSocket(`${API_URL.replace(/^http/, 'ws')}/api/ws?ticket=${encodeURIComponent(ticket)}`);
+  const socketOrigin = API_URL
+    ? API_URL.replace(/^http/, 'ws')
+    : `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}`;
+  return new WebSocket(`${socketOrigin}/api/ws?ticket=${encodeURIComponent(ticket)}`);
 }

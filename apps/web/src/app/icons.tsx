@@ -51,7 +51,7 @@ export function Logo({ sub, mark }: { sub?: string; mark?: boolean }) {
   );
 }
 
-const cache = new Map<IconName, (props: SVGProps<SVGSVGElement>) => JSX.Element>();
+const cache = new Map<IconName, (props: SVGProps<SVGSVGElement>) => ReturnType<typeof Icon>>();
 
 /** Ícone do app no formato que os componentes do Astryx aceitam (um componente SVG). */
 export function svgIcon(name: IconName) {
