@@ -188,3 +188,23 @@ test('sem espaço para duas, uma rota só usa a tela inteira', () => {
 test('áreas pequenas não iniciam a animação', () => {
   assert.equal(buildRoads(320, 220, [], 60, 150), null);
 });
+
+test('telas largas aceitam mais rotas, cada uma na sua faixa, sem se cruzarem', () => {
+  const wide = layouts.filter(([w]) => w >= 1300);
+  assert.ok(wide.length > 0, 'precisa de um layout largo no teste');
+  for (const [width, height, blocks] of wide) {
+    const roads = buildRoads(width, height, blocks, 62, height);
+    const zones = splitZones(roads, { left: 0, right: width, max: 4 });
+    assert.ok(zones.length >= 2 && zones.length <= 4, `${width}px: ${zones.length} rotas`);
+    for (let i = 1; i < zones.length; i++) assert.ok(zones[i].minX - zones[i - 1].maxX >= 60, `faixa neutra entre ${i - 1} e ${i}`);
+    const routes = zones.map((zone, i) => new AmbientRoute(roads, random(31 + i), view(0, Math.min(900, height)), zone));
+    for (let step = 0; step < 3000; step++) for (const m of routes) {
+      m.advance(.02);
+      assert.ok(m.position.x >= m.zone.minX - .01 && m.position.x <= m.zone.maxX + .01);
+    }
+    assert.ok(routes.every(m => m.completed >= 1));
+  }
+  // sem a opção, o padrão continua sendo duas rotas
+  const [w, h, b] = layouts.find(([x]) => x >= 1300);
+  assert.equal(splitZones(buildRoads(w, h, b, 62, h)).length, 2);
+});

@@ -88,12 +88,30 @@ export const NARROW = 720;
  * (8% da largura de cada lado do centro, entre 50 e 140px). Nenhuma das duas entra nela, então as setas
  * nunca se cruzam e ficam sempre a pelo menos o dobro dessa folga de distância.
  * Em tela estreita, ou sem espaço para as duas, uma rota só usa a tela inteira.
+ * Com `max` maior que 2 e uma coluna útil larga, divide em mais faixas (uma rota por faixa, até `max`).
  */
-export function splitZones(r: Roads): Zone[] {
+export interface SplitOptions {
+  /** Coluna útil (onde as setas aparecem): esquerda e direita em px. Sem isso, a tela inteira. */
+  left?: number;
+  right?: number;
+  /** Até quantas rotas ao mesmo tempo. Padrão 2 (metade esquerda e metade direita). */
+  max?: number;
+}
+
+export function splitZones(r: Roads, opts: SplitOptions = {}): Zone[] {
   if (r.width < NARROW) return [FULL_ZONE];
-  const mid = r.width / 2, buffer = Math.max(50, Math.min(140, r.width * .08));
-  const zones = [{ minX: -Infinity, maxX: mid - buffer }, { minX: mid + buffer, maxX: Infinity }];
-  return zones.every(z => r.destinations.filter(k => inZone(r, k, z)).length >= 2) ? zones : [FULL_ZONE];
+  const left = opts.left ?? 0, right = opts.right ?? r.width, span = right - left;
+  const wanted = opts.max && opts.max > 2 ? Math.max(2, Math.min(opts.max, Math.floor(span / 330))) : 2;
+  // tenta com o número pedido e vai reduzindo até todas as faixas terem por onde andar
+  for (let n = wanted; n >= 2; n--) {
+    const buffer = n === 2 ? Math.max(50, Math.min(140, span * .08)) : Math.max(34, Math.min(90, span * .045));
+    const zones: Zone[] = Array.from({ length: n }, (_, i) => ({
+      minX: i === 0 ? (opts.left ?? -Infinity) : left + (span * i) / n + buffer,
+      maxX: i === n - 1 ? Infinity : left + (span * (i + 1)) / n - buffer,
+    }));
+    if (zones.every(z => r.destinations.filter(k => inZone(r, k, z)).length >= 2)) return zones;
+  }
+  return [FULL_ZONE];
 }
 
 /** Caminho mais curto pelas ruas (A*), contando cada curva como distância extra e sem sair da zona. Devolve os nós. */

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { AmbientRoute, CONFIRM_SECONDS, TRAIL_SECONDS, buildRoads, clamp, splitZones, type Rect, type View } from './ambientRouteModel';
 
 /**
- * Fundo transparente da operação. Duas rotas em telas largas, cada uma na sua metade; uma só no celular (ver `splitZones`).
+ * Fundo transparente da operação. Até quatro rotas em telas largas, cada uma na sua faixa; uma só no celular (ver `splitZones`).
  * Elas vivem em coordenadas da página: ao rolar, rolam junto com o conteúdo (sem apagar nem recomeçar).
  * Os blocos e controles nunca recebem eventos da animação.
  */
@@ -152,12 +152,14 @@ export function AmbientRoutes({ pageKey }: { pageKey: string }) {
       if (nextKey !== key) {
         key = nextKey;
         const roads = buildRoads(width, pageHeight, blocks, headerBottom, pageHeight);
-        const zones = roads ? splitZones(roads) : [];
+        // uma rota por faixa da coluna de conteúdo (até 4 em telas largas): mais setas ao redor, sem se cruzarem
+        const mr = rect(main!);
+        const zones = roads ? splitZones(roads, { left: Math.max(0, mr.x), right: Math.min(width, mr.right), max: 4 }) : [];
         if (!roads) routes = [];
         else if (routes.length === zones.length) routes.forEach((m, i) => m.setRoads(roads, zones[i]));
         else routes = zones.map((zone, i) => {
           const m = new AmbientRoute(roads, Math.random, view(), zone);
-          if (i) m.hold = 1.6;   // a segunda parte um pouco depois, para as duas não andarem em sincronia
+          m.hold = i * 1.3;   // cada uma parte um pouco depois da anterior, para não andarem em sincronia
           return m;
         });
       }
