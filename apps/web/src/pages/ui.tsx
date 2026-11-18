@@ -53,20 +53,24 @@ export const Empty = ({ children }: { children: ReactNode }) => <div className="
  * Janela de diálogo (Dialog do Astryx: foco preso, Escape, rolagem travada, leitor de tela e animação já resolvidos).
  * Quem chama continua usando `onClose`, que roda quando a pessoa fecha pelo X, por Escape ou fora da janela.
  */
-export function Modal({ title, onClose, children, footer, icon, tone = 'info', width = 520 }: {
+export function Modal({ title, onClose, children, footer, icon, tone = 'info', width = 520, toolbar, className = '' }: {
   width?: number;
+  /** Faixa fixa entre o título e o conteúdo (abas, filtros): não rola junto. */
+  toolbar?: ReactNode;
+  className?: string;
   title: string; onClose: () => void; children: ReactNode; footer?: ReactNode;
   /** Ícone ao lado do título (cancelar, avaliar, filtros). */
   icon?: IconName; tone?: 'info' | 'danger' | 'success';
 }) {
   return (
-    <Dialog isOpen onOpenChange={(open) => { if (!open) onClose(); }} width={width}>
-      <div className="modal flat">
+    <Dialog isOpen onOpenChange={(open) => { if (!open) onClose(); }} width={width} maxHeight="90dvh">
+      <div className={`modal flat ${className}`}>
       <DialogHeader
         title={title}
         onOpenChange={(open) => { if (!open) onClose(); }}
         startContent={icon ? <span className={`modal-icon ${tone}`} aria-hidden="true"><Icon name={icon} size={18} /></span> : undefined}
       />
+      {toolbar && <div className="modal-toolbar">{toolbar}</div>}
       <div className="modal-body">{children}</div>
       {footer && <div className="modal-foot">{footer}</div>}
       </div>

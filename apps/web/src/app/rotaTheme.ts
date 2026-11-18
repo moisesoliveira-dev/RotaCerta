@@ -11,13 +11,14 @@ export const rotaTheme = defineTheme({
   tokens: {
     '--color-accent': ['#1b4fd8', '#7fa8ff'],
     '--color-background-body': ['#edf2fb', '#07122a'],
-    '--color-background-surface': ['#ffffff', '#0e1c3d'],
+    // a área de conteúdo é levemente azulada e os cartões brancos: assim cada bloco se destaca como um contêiner
+    '--color-background-surface': ['#f6f8fd', '#0b1733'],
     '--color-background-card': ['#ffffff', '#0e1c3d'],
     '--color-background-muted': ['#e1e9f7', '#162850'],
     '--color-background-inverted': ['#081735', '#e7eefc'],
     '--color-text-primary': ['#0a1a3c', '#e7eefc'],
     '--color-text-secondary': ['#56658b', '#94a6cc'],
-    '--color-border': ['#d0dbef', '#1d2e58'],
+    '--color-border': ['#c3d0e8', '#2a3f73'],
     '--color-info': ['#1b4fd8', '#7fa8ff'],
     '--color-text-info': ['#1b4fd8', '#7fa8ff'],
   },

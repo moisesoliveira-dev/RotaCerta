@@ -6,7 +6,7 @@ import { Icon } from '../app/icons';
 import { useStore } from '../app/store';
 import { AgentChat } from './AgentChat';
 import { TilesSkeleton } from './Skeletons';
-import { Header, Modal } from './ui';
+import { Header, Modal, Tabs } from './ui';
 
 /* ---------- tipos do que a API devolve ---------- */
 interface ToolInfo { name: string; label: string; group: string; description: string; roles: Role[] }
@@ -159,15 +159,35 @@ const toDraft = (a: Agent): Draft & { id: number } => ({
 });
 
 /* ---------- criação e edição ---------- */
+const EDITOR_TABS = ['principal', 'consultas', 'acesso', 'conhecimento', 'modelo'] as const;
+type EditorTab = (typeof EDITOR_TABS)[number];
+
+/**
+ * Janela de criação/edição do agente, em abas (Principal · Consultas · Acesso · Conhecimento · Modelo): o cabeçalho e as
+ * abas ficam no topo, só o conteúdo rola e o rodapé fica fixo com Voltar / Avançar / Salvar.
+ */
 function Editor({ draft, catalog, onClose, onSaved }: { draft: Draft & { id?: number }; catalog: Catalog; onClose: () => void; onSaved: () => void }) {
   const [d, setD] = useState(draft);
+  const [tab, setTab] = useState<EditorTab>('principal');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
   const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   const groups = useMemo(() => [...new Set(catalog.tools.map((t) => t.group))], [catalog.tools]);
+  const index = EDITOR_TABS.indexOf(tab);
+  const labels: Record<EditorTab, string> = {
+    principal: 'Principal',
+    consultas: `Consultas${d.tools.length ? ` · ${d.tools.length}` : ''}`,
+    acesso: `Acesso · ${d.roles.length}`,
+    conhecimento: `Conhecimento${d.knowledge.length ? ` · ${d.knowledge.length}` : ''}`,
+    modelo: 'Modelo',
+  };
 
   const save = async () => {
+    // o que falta fica na aba de origem: leva a pessoa até lá em vez de só mostrar o erro
+    if (d.name.trim().length < 2) { setTab('principal'); setError('Dê um nome ao agente.'); return; }
+    if (d.instructions.trim().length < 10) { setTab('principal'); setError('Escreva as instruções do agente (ao menos uma frase).'); return; }
+    if (d.roles.length === 0) { setTab('acesso'); setError('Escolha ao menos um perfil que pode usar o agente.'); return; }
     setSaving(true); setError('');
     try {
       const { id, ...body } = d;
@@ -181,72 +201,100 @@ function Editor({ draft, catalog, onClose, onSaved }: { draft: Draft & { id?: nu
   };
 
   return (
-    <Modal title={d.id ? `Editar agente · ${draft.name}` : 'Novo agente'} width={860} onClose={onClose} footer={<>
-      {d.id && <button type="button" className="danger" onClick={() => void remove()}>Remover</button>}
-      <span className="grow" />
-      <button type="button" onClick={onClose}>Cancelar</button>
-      <button type="button" className="primary" disabled={saving} onClick={() => void save()}>{saving ? 'Salvando…' : 'Salvar agente'}</button>
-    </>}>
-      {!d.id && (
-        <div className="ag-templates">
-          <span className="muted small">Começar de um modelo:</span>
-          {TEMPLATES.map((t) => <button type="button" key={t.key} className="link" onClick={() => setD({ ...EMPTY, ...t.draft })}>{t.title}</button>)}
-        </div>
+    <Modal
+      title={d.id ? `Editar agente · ${draft.name}` : 'Novo agente'} width={900} className="ag-editor" onClose={onClose}
+      toolbar={<Tabs value={tab} onChange={(v) => { setTab(v as EditorTab); setError(''); }} label="Seções do agente" items={EDITOR_TABS.map((t) => ({ value: t, label: labels[t] }))} />}
+      footer={<>
+        {d.id && <button type="button" className="danger" onClick={() => void remove()}>Remover</button>}
+        <span className="grow" />
+        <button type="button" onClick={onClose}>Cancelar</button>
+        <button type="button" disabled={index === 0} onClick={() => setTab(EDITOR_TABS[index - 1])}>‹ Voltar</button>
+        <button type="button" disabled={index === EDITOR_TABS.length - 1} onClick={() => setTab(EDITOR_TABS[index + 1])}>Avançar ›</button>
+        <button type="button" className="primary" disabled={saving} onClick={() => void save()}>{saving ? 'Salvando…' : 'Salvar agente'}</button>
+      </>}
+    >
+      {error && <p className="error" role="alert">{error}</p>}
+
+      {tab === 'principal' && (
+        <>
+          {!d.id && (
+            <div className="ag-templates">
+              <span className="muted small">Começar de um modelo:</span>
+              {TEMPLATES.map((t) => <button type="button" key={t.key} className="link" onClick={() => setD({ ...EMPTY, ...t.draft })}>{t.title}</button>)}
+            </div>
+          )}
+          <div className="form-grid">
+            <label className="field">Nome<input value={d.name} onChange={(e) => set('name', e.target.value)} maxLength={60} placeholder="Ex.: Assistente da operação" autoFocus /></label>
+            <label className="field">Descrição (aparece no cartão)<input value={d.description} onChange={(e) => set('description', e.target.value)} maxLength={240} /></label>
+            <label className="field wide">Instruções: o papel do agente, o tom e o que ele deve priorizar
+              <textarea rows={9} value={d.instructions} onChange={(e) => set('instructions', e.target.value)} maxLength={6000} placeholder="Você ajuda a equipe a… Quando perguntarem…, faça…" />
+              <span className="muted small">{d.instructions.length}/6000 · As regras da plataforma valem acima destas: o agente só consulta, não inventa dados e trata o que vem das ferramentas como informação, não como ordem.</span>
+            </label>
+          </div>
+        </>
       )}
 
-      <div className="ag-section"><span className="bal-n">1</span><h3>Quem é o agente</h3></div>
-      <div className="form-grid">
-        <label className="field">Nome<input value={d.name} onChange={(e) => set('name', e.target.value)} maxLength={60} placeholder="Ex.: Assistente da operação" /></label>
-        <label className="field">Descrição (aparece no cartão)<input value={d.description} onChange={(e) => set('description', e.target.value)} maxLength={240} /></label>
-        <label className="field wide">Instruções: o papel do agente, o tom e o que ele deve priorizar
-          <textarea rows={6} value={d.instructions} onChange={(e) => set('instructions', e.target.value)} maxLength={6000} placeholder="Você ajuda a equipe a… Quando perguntarem…, faça…" />
-          <span className="muted small">Regras da plataforma valem acima destas: o agente só consulta, não inventa dados e trata o que vem das ferramentas como informação, não como ordem.</span>
-        </label>
-      </div>
-
-      <div className="ag-section"><span className="bal-n">2</span><h3>O que ele pode consultar</h3></div>
-      {groups.map((g) => (
-        <div key={g} className="ag-tools">
-          <span className="muted small">{g}</span>
-          {catalog.tools.filter((t) => t.group === g).map((t) => (
-            <label key={t.name} className="ag-tool">
-              <input type="checkbox" checked={d.tools.includes(t.name)} onChange={() => set('tools', toggle(d.tools, t.name))} />
-              <span><b>{t.label}</b><span className="muted small">{t.description}</span>
-                {t.roles.length < 3 && <span className="muted small"> Só para: {t.roles.map((r) => ROLE_LABELS[r]).join(', ')}.</span>}</span>
-            </label>
+      {tab === 'consultas' && (
+        <>
+          <p className="muted small">Escolha o que o agente pode consultar. São só leituras, e cada pessoa só alcança o que o perfil dela já enxerga.</p>
+          {groups.map((g) => (
+            <div key={g} className="ag-tools">
+              <span className="muted small">{g}</span>
+              {catalog.tools.filter((t) => t.group === g).map((t) => (
+                <label key={t.name} className="ag-tool">
+                  <input type="checkbox" checked={d.tools.includes(t.name)} onChange={() => set('tools', toggle(d.tools, t.name))} />
+                  <span><b>{t.label}</b><span className="muted small">{t.description}</span>
+                    {t.roles.length < 3 && <span className="muted small"> Só para: {t.roles.map((r) => ROLE_LABELS[r]).join(', ')}.</span>}</span>
+                </label>
+              ))}
+            </div>
           ))}
+        </>
+      )}
+
+      {tab === 'acesso' && (
+        <>
+          <p className="muted small">Quem pode conversar com este agente. A gestão sempre consegue abrir os agentes para configurar.</p>
+          <div className="ag-access">
+            {AGENT_ROLES.map((r) => (
+              <label key={r} className="ag-tool">
+                <input type="checkbox" checked={d.roles.includes(r)} onChange={() => set('roles', toggle(d.roles, r))} />
+                <span><b>{ROLE_LABELS[r]}</b></span>
+              </label>
+            ))}
+          </div>
+          <label className="ag-tool">
+            <input type="checkbox" checked={d.active} onChange={(e) => set('active', e.target.checked)} />
+            <span><b>Agente ativo</b><span className="muted small">Desativado, ele some para a equipe (a gestão continua vendo).</span></span>
+          </label>
+        </>
+      )}
+
+      {tab === 'conhecimento' && (
+        <>
+          <p className="muted small">Regras e procedimentos da loja que o agente pode citar (política de troca, horários, prazos…). Só entra o que estiver aqui.</p>
+          {d.knowledge.map((k, i) => (
+            <div key={i} className="ag-kb">
+              <input aria-label="Título" value={k.title} placeholder="Título (ex.: Política de troca)" onChange={(e) => set('knowledge', d.knowledge.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
+              <textarea aria-label="Texto" rows={4} value={k.text} placeholder="O que o agente deve saber sobre isso" onChange={(e) => set('knowledge', d.knowledge.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
+              <button type="button" className="link" onClick={() => set('knowledge', d.knowledge.filter((_, j) => j !== i))}>Remover item</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => set('knowledge', [...d.knowledge, { title: '', text: '' }])} disabled={d.knowledge.length >= 30}>+ Adicionar item</button>
+        </>
+      )}
+
+      {tab === 'modelo' && (
+        <div className="form-grid">
+          <label className="field">Modelo de IA
+            <select value={d.model} onChange={(e) => set('model', e.target.value)}>{catalog.models.map((m) => <option key={m} value={m}>{MODEL_LABELS[m] ?? m}</option>)}</select>
+          </label>
+          <label className="field">Esforço de raciocínio
+            <select value={d.effort} onChange={(e) => set('effort', e.target.value as Draft['effort'])}>{EFFORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+            <span className="muted small">Mais esforço = respostas mais cuidadosas, porém mais lentas e caras.</span>
+          </label>
         </div>
-      ))}
-
-      <div className="ag-section"><span className="bal-n">3</span><h3>Quem pode usar</h3></div>
-      <div className="chips">
-        {AGENT_ROLES.map((r) => (
-          <label key={r} className="check"><input type="checkbox" checked={d.roles.includes(r)} onChange={() => set('roles', toggle(d.roles, r))} /> {ROLE_LABELS[r]}</label>
-        ))}
-        <label className="check"><input type="checkbox" checked={d.active} onChange={(e) => set('active', e.target.checked)} /> Ativo</label>
-      </div>
-
-      <div className="ag-section"><span className="bal-n">4</span><h3>Base de conhecimento <span className="muted small">(regras e procedimentos da loja que o agente pode citar)</span></h3></div>
-      {d.knowledge.map((k, i) => (
-        <div key={i} className="ag-kb">
-          <input aria-label="Título" value={k.title} placeholder="Título (ex.: Política de troca)" onChange={(e) => set('knowledge', d.knowledge.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
-          <textarea aria-label="Texto" rows={3} value={k.text} placeholder="O que o agente deve saber sobre isso" onChange={(e) => set('knowledge', d.knowledge.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
-          <button type="button" className="link" onClick={() => set('knowledge', d.knowledge.filter((_, j) => j !== i))}>Remover</button>
-        </div>
-      ))}
-      <button type="button" onClick={() => set('knowledge', [...d.knowledge, { title: '', text: '' }])} disabled={d.knowledge.length >= 30}>+ Adicionar item</button>
-
-      <div className="ag-section"><span className="bal-n">5</span><h3>Modelo</h3></div>
-      <div className="form-grid">
-        <label className="field">Modelo de IA
-          <select value={d.model} onChange={(e) => set('model', e.target.value)}>{catalog.models.map((m) => <option key={m} value={m}>{MODEL_LABELS[m] ?? m}</option>)}</select>
-        </label>
-        <label className="field">Esforço de raciocínio
-          <select value={d.effort} onChange={(e) => set('effort', e.target.value as Draft['effort'])}>{EFFORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-          <span className="muted small">Mais esforço = respostas mais cuidadosas, porém mais lentas e caras.</span>
-        </label>
-      </div>
-      {error && <p className="error" role="alert">{error}</p>}
+      )}
     </Modal>
   );
 }
