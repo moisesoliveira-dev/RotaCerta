@@ -108,6 +108,11 @@ export function App() {
   // painel "Telas" da barra de baixo: todas as telas do perfil, sem depender da busca
   const [screens, setScreens] = useState(false);
   useEffect(() => { setScreens(false); }, [pathname]);
+  // o título da aba diz em que tela a pessoa está (leitor de tela anuncia; com várias abas abertas, dá para achar)
+  useEffect(() => {
+    const page = PAGES.find((p) => pathname === p.path || pathname.startsWith(`${p.path}/`));
+    document.title = page ? `${page.label} · RotaCerta` : 'RotaCerta';
+  }, [pathname]);
   useEffect(() => {
     if (!screens) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setScreens(false); };
@@ -220,7 +225,7 @@ export function App() {
         mode={navStyle} homePath={homePath(role)} roleLabel={ROLE_LABELS[role]} role={role} userName={user.name} items={items} action={dock.action}
         showBell={canAccess(role, 'notificacoes')} onSearch={() => setSearching(true)} onLogout={logout} dock={dockBar}
       >
-        <main className="main" id="conteudo" tabIndex={-1}>
+        <div className="main" id="conteudo" tabIndex={-1}>
           {role === 'motorista' && <DriverBeacon routeId={data.routes.find((r) => r.status === 'active' && r.driverId === user.driverId)?.id ?? null} />}
       <AmbientRoutes pageKey={`${pathname}|${themePref.mode}|${themePref.palette}`} />
           {problem && <div className="banner error" role="alert">{problem} <button type="button" onClick={clearProblem}>Fechar</button></div>}
@@ -228,7 +233,7 @@ export function App() {
             {menu.map((m) => <Route key={m.path} path={`${m.path}/*`} element={m.element} />)}
             <Route path="*" element={<Navigate to={homePath(role)} replace />} />
           </Routes>
-        </main>
+        </div>
       </Shell>
       {screensSheet}
       <TourBar />

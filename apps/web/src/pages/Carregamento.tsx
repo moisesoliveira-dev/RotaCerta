@@ -7,6 +7,7 @@ import {
 import { useStore } from '../app/store';
 import { Empty, Header } from './ui';
 import { Etiquetas } from './Etiquetas';
+import { useFeedback } from '../app/feedback';
 
 export function Carregamento() {
   return (
@@ -34,6 +35,7 @@ function Lista() {
 }
 
 function Conferencia({ route }: { route: RouteT }) {
+  const { confirm, toast } = useFeedback();
   const { data, setChecked, confirmOrder, releaseRoute, discardRoute, syncConference } = useStore();
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -73,7 +75,7 @@ function Conferencia({ route }: { route: RouteT }) {
         <button type="button" className="primary" disabled={!complete} onClick={release}>Liberar romaneio ao motorista</button>
         <Link className="btn" to={`etiquetas/${route.id}`}>Etiquetas</Link>
         <button type="button" onClick={() => navigate('/expedicao')}>Continuar depois</button>
-        <button type="button" className="danger" onClick={() => { if (confirm(`Desfazer a carga #${route.id}? As entregas voltam para a fila.`)) discardRoute(route.id); }}>Desfazer carga</button>
+        <button type="button" className="danger" onClick={async () => { if (await confirm({ title: `Desfazer a carga #${route.id}?`, message: 'As entregas voltam para a fila.', confirmLabel: 'Desfazer carga', danger: true })) { discardRoute(route.id); toast('Carga desfeita. As entregas voltaram para a fila.'); } }}>Desfazer carga</button>
       </div>
       <p className="muted small">A conferência fica salva neste navegador. Para retomar, volte em Carregamento ou use "Retomar conferência" na expedição.</p>
     </section>

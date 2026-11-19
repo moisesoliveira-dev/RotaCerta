@@ -4,6 +4,7 @@ import { MotionConfig } from 'motion/react';
 import { HashRouter } from 'react-router-dom';
 import { App } from './app/App';
 import { StoreProvider } from './app/store';
+import { FeedbackProvider } from './app/feedback';
 import { PwaProvider } from './app/pwa';
 import { TourProvider } from './app/tour';
 import { installPressFeedback } from './app/motion';
@@ -19,11 +20,13 @@ createRoot(document.getElementById('root')!).render(
     <AppTheme>
     <PwaProvider>
       <StoreProvider>
+        <FeedbackProvider>
         <HashRouter>
           <TourProvider>
             <App />
           </TourProvider>
         </HashRouter>
+        </FeedbackProvider>
       </StoreProvider>
     </PwaProvider>
     </AppTheme>

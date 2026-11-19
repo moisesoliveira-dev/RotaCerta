@@ -561,3 +561,33 @@ body { font-family: var(--font-family-body, 'Figtree Variable'), system-ui, sans
 .tm-next button.primary.tm-main { min-height: 54px; font-size: 16px; background: var(--color-accent); color: var(--color-background-body); }
 .tm-next button.danger { background: none; color: var(--red); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
 .tm-next a.btn.tm-main { display: flex; align-items: center; justify-content: center; min-height: 54px; font-size: 16px; font-weight: 650; border-radius: 14px; background: var(--color-accent); color: var(--color-background-body); border-color: transparent; text-decoration: none; }
+
+/* ---------- Configurações > Inteligência artificial ---------- */
+.ia-cfg { display: grid; gap: 14px; max-width: 760px; }
+.ia-status-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; } .ia-status-row > div { flex: 1; min-width: 220px; } .ia-status-row p { margin: 2px 0 0; }
+.ia-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); flex: none; } .ia-dot.ok { background: var(--green); box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 25%, transparent); } .ia-dot.bad { background: var(--red); } .ia-dot.off { background: var(--color-text-orange); }
+.ia-test.ok { color: var(--green); font-weight: 600; margin: 10px 0 0; }
+.ia-form { display: grid; gap: 16px; }
+.ia-switch { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; } .ia-switch span { display: grid; gap: 2px; } .ia-switch input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--color-accent); }
+.ia-effort { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .ia-effort legend { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 6px; padding: 0; }
+.ia-effort label { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; background: var(--bg); } .ia-effort label.on { border-color: var(--color-accent); background: var(--brand-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 16%, transparent); } .ia-effort input { position: absolute; opacity: 0; pointer-events: none; } .ia-effort label:focus-within { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.ia-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .ia-saved { display: inline-flex; align-items: center; gap: 4px; color: var(--green); font-weight: 600; } .ia-by { margin-left: auto; }
+@media (max-width: 640px) { .ia-effort { grid-template-columns: 1fr; } }
+.ia-effort label.on small { color: var(--ink); }
+
+/* ---------- Avisos (toast) e alvos de toque ---------- */
+.toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 400; display: grid; gap: 8px; width: min(440px, calc(100vw - 24px)); pointer-events: none; }
+.toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--color-text-primary, var(--ink)); color: var(--color-background-body, var(--bg)); box-shadow: 0 10px 30px rgba(10, 26, 60, .3); font-size: 14px; font-weight: 550; animation: toast-in .22s ease-out both; }
+.toast.success { border-left: 5px solid var(--green); } .toast.error { border-left: 5px solid var(--red); } .toast.info { border-left: 5px solid var(--color-accent); }
+.toast span { flex: 1; }
+.toasts .toast .toast-x { min-height: 32px; min-width: 32px; width: 32px; height: 32px; padding: 0; border: 0; background: none; color: inherit; font-size: 20px; line-height: 1; opacity: .8; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+@media (min-width: 900px) { .toasts { bottom: 24px; } }
+/* Alvos de toque (WCAG 2.5.8 pede 24 px; Material e Apple pedem 44 a 48 px): em tela de toque, o que se aperta tem 44 px. */
+@media (pointer: coarse) {
+  .shell .top-search, .shell .top-bell { min-width: 44px; min-height: 44px; }
+  .shell .test-switch select { min-height: 44px; }
+  .shell .astryx-avatar { min-width: 40px; min-height: 40px; }
+  .shell input:not([type=checkbox]):not([type=radio]), .shell select { min-height: 44px; }
+}

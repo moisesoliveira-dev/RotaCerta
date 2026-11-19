@@ -7,6 +7,7 @@ import {
 } from '@rotacerta/domain';
 import { useStore } from '../app/store';
 import { Empty, Header } from './ui';
+import { useFeedback } from '../app/feedback';
 
 const MAX_BYTES = 12 * 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -41,6 +42,7 @@ const nextNumber = (papers: PaperForm[]) => {
 /* ---------- Lista / captura ---------- */
 
 export function FichaInicio() {
+  const { confirm, toast } = useFeedback();
   const { papers, addPaper, deletePaper } = useStore();
   const navigate = useNavigate();
   const input = useRef<HTMLInputElement>(null);
@@ -104,7 +106,7 @@ export function FichaInicio() {
               </div>
               <span className="actions">
                 <Link className="btn" to={`/atendimento/ficha/${p.id}`}>{p.status === 'imported' ? 'Ver ficha' : 'Continuar'}</Link>
-                {p.status !== 'imported' && <button type="button" className="danger" onClick={() => { if (confirm('Excluir este rascunho de ficha?')) deletePaper(p.id); }}>Excluir</button>}
+                {p.status !== 'imported' && <button type="button" className="danger" onClick={async () => { if (await confirm({ title: 'Excluir este rascunho de ficha?', confirmLabel: 'Excluir rascunho', danger: true })) { deletePaper(p.id); toast('Rascunho excluído.'); } }}>Excluir</button>}
               </span>
             </div>
           );

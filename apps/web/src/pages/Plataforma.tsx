@@ -6,6 +6,7 @@ import { useStore } from '../app/store';
 import { TestProfileSwitch } from '../app/TestProfileSwitch';
 import { Empty, Header, Modal } from './ui';
 import { SkeletonLines, TableSkeleton } from './Skeletons';
+import { useFeedback } from '../app/feedback';
 
 interface CompanyRow { id: number; name: string; active: boolean; createdAt: string; users: number; activeUsers: number; lastLogin: string | null }
 interface CompanyDetail { id: number; name: string; active: boolean; createdAt: string; usage: { orders: number; clients: number; vehicles: number; drivers: number; routes: number } }
@@ -54,6 +55,7 @@ export function PlatformApp() {
 
 /* ---------- empresas ---------- */
 function Empresas() {
+  const { confirm } = useFeedback();
   const [companies, setCompanies] = useState<CompanyRow[] | null>(null);
   const [error, setError] = useState('');
   const [open, setOpen] = useState<number | null>(null);
@@ -64,7 +66,7 @@ function Empresas() {
 
   const toggle = async (c: CompanyRow) => {
     const verb = c.active ? 'Suspender' : 'Reativar';
-    if (!confirm(c.active ? `${verb} ${c.name}? Ninguém da empresa conseguirá entrar e as sessões abertas serão encerradas. Os dados são mantidos.` : `${verb} ${c.name}?`)) return;
+    if (!(await confirm({ title: `${verb} ${c.name}?`, message: c.active ? 'Ninguém da empresa conseguirá entrar e as sessões abertas serão encerradas. Os dados são mantidos.' : undefined, confirmLabel: verb, danger: c.active }))) return;
     try { await call('PATCH', `/platform/companies/${c.id}`, { active: !c.active }); await load(); } catch (e) { setError(message(e)); }
   };
 
@@ -77,7 +79,7 @@ function Empresas() {
         {companies === null ? <TableSkeleton rows={4} cols={6} /> : companies.length === 0 ? <Empty>Nenhuma empresa cadastrada.</Empty> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Empresa</th><th>Situação</th><th>Usuários ativos</th><th>Último acesso</th><th>Criada em</th><th></th></tr></thead>
+              <thead><tr><th>Empresa</th><th>Situação</th><th>Usuários ativos</th><th>Último acesso</th><th>Criada em</th><th><span className="sr-only">Ações</span></th></tr></thead>
               <tbody>
                 {companies.map((c) => (
                   <tr key={c.id}>
@@ -197,12 +199,13 @@ function CompanyDialog({ id, onClose }: { id: number; onClose: () => void }) {
 }
 
 function UserList({ users, onChanged, onTemp, onError }: { users: UserRow[]; onChanged: () => void; onTemp: (u: UserRow, password: string) => void; onError: (m: string) => void }) {
+  const { confirm } = useFeedback();
   const toggle = async (u: UserRow) => {
-    if (u.active && !confirm(`Desativar ${u.name}? A pessoa será desconectada e não conseguirá entrar.`)) return;
+    if (u.active && !(await confirm({ title: `Desativar ${u.name}?`, message: 'A pessoa será desconectada e não conseguirá entrar.', confirmLabel: 'Desativar', danger: true }))) return;
     try { await call('PATCH', `/platform/users/${u.id}`, { active: !u.active }); onChanged(); } catch (e) { onError(message(e)); }
   };
   const reset = async (u: UserRow) => {
-    if (!confirm(`Gerar uma senha provisória para ${u.name}? A senha atual deixa de valer e as sessões abertas são encerradas.`)) return;
+    if (!(await confirm({ title: `Gerar uma senha provisória para ${u.name}?`, message: 'A senha atual deixa de valer e as sessões abertas são encerradas.', confirmLabel: 'Gerar senha', danger: true }))) return;
     try { const { password } = await call<{ password: string }>('POST', `/platform/users/${u.id}/reset-password`); onTemp(u, password); onChanged(); } catch (e) { onError(message(e)); }
   };
   if (!users.length) return <Empty>Nenhum usuário.</Empty>;

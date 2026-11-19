@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { ApiError, call } from '../app/api';
 import { Icon } from '../app/icons';
 import { Markdown } from './Markdown';
+import { useFeedback } from '../app/feedback';
 
 export interface ChatAgent { id: number; name: string; description: string; tools: string[] }
 interface Step { tool: string; label: string; ok: boolean }
@@ -37,6 +38,7 @@ function examples(tools: string[]) {
 export function AgentChat({ agent, ready, toolLabel, onBack, onEdit, children }: {
   agent: ChatAgent; ready: boolean; toolLabel: (n: string) => string; onBack: () => void; onEdit?: () => void; children?: ReactNode;
 }) {
+  const { confirm } = useFeedback();
   const [messages, setMessages] = useState<Msg[]>(() => loadChat(agent.id));
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -91,7 +93,10 @@ export function AgentChat({ agent, ready, toolLabel, onBack, onEdit, children }:
     try { await navigator.clipboard.writeText(t); setCopied(i); setTimeout(() => setCopied((c) => (c === i ? null : c)), 1500); } catch { /* sem permissão */ }
   };
 
-  const reset = () => { if (!messages.length || confirm('Começar uma nova conversa? A atual será apagada deste aparelho.')) { setMessages([]); input.current?.focus(); } };
+  const reset = async () => {
+    if (messages.length && !(await confirm({ title: 'Começar uma nova conversa?', message: 'A conversa atual será apagada deste aparelho.', confirmLabel: 'Nova conversa' }))) return;
+    setMessages([]); input.current?.focus();
+  };
   const initial = agent.name.trim().charAt(0).toUpperCase() || 'A';
   const sugg = examples(agent.tools);
 

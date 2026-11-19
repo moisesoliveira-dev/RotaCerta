@@ -8,6 +8,7 @@ import { Header, Modal, OrderPill } from './ui';
 import { ListSkeleton, SkeletonLines } from './Skeletons';
 import { Icon } from '../app/icons';
 import { Item, Stagger } from '../app/motion';
+import { useFeedback } from '../app/feedback';
 
 type Row = Client & { orders: number };
 interface Search { items: Row[]; total: number }
@@ -71,6 +72,7 @@ export function Clientes() {
 }
 
 function ClientDialog({ id, onClose, onChanged }: { id: number; onClose: () => void; onChanged: () => void }) {
+  const { confirm, toast } = useFeedback();
   const { data, command } = useStore();
   const [client, setClient] = useState<Client | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -102,15 +104,15 @@ function ClientDialog({ id, onClose, onChanged }: { id: number; onClose: () => v
     if (err) setError(err); else { setInfo('Cadastro atualizado.'); onChanged(); }
   };
   const merge = async (dupId: number, name: string) => {
-    if (!confirm(`Unir o cadastro de ${name} a este? As entregas dele passam para ${client.name} e o cadastro duplicado some.`)) return;
+    if (!(await confirm({ title: `Unir o cadastro de ${name}?`, message: `As entregas dele passam para ${client.name} e o cadastro duplicado some.`, confirmLabel: 'Unir cadastros', danger: true }))) return;
     setError('');
     const err = await command({ method: 'POST', path: `/clients/${id}/merge`, body: { mergeId: dupId } });
     if (err) setError(err); else { setMergeQ(''); setInfo('Cadastros unidos.'); onChanged(); }
   };
   const remove = async () => {
-    if (!confirm(`Remover o cadastro de ${client.name}?`)) return;
+    if (!(await confirm({ title: `Remover o cadastro de ${client.name}?`, confirmLabel: 'Remover cadastro', danger: true }))) return;
     const err = await command({ method: 'DELETE', path: `/clients/${id}` });
-    if (err) setError(err); else { onChanged(); onClose(); }
+    if (err) setError(err); else { toast('Cadastro removido.'); onChanged(); onClose(); }
   };
 
   return (

@@ -32,7 +32,7 @@ export function Usuarios() {
       {error && <p className="error" role="alert">{error}</p>}
       {users === null ? <TableSkeleton rows={4} cols={6} /> : <div className="table-wrap">
         <table>
-          <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Motorista</th><th>Situação</th><th></th></tr></thead>
+          <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Motorista</th><th>Situação</th><th><span className="sr-only">Ações</span></th></tr></thead>
           <tbody>
             {users.map((u) => (
               <tr key={u.id}>

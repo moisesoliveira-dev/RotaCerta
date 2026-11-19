@@ -7,10 +7,11 @@ import { useStore } from '../app/store';
 import { AgentChat } from './AgentChat';
 import { TilesSkeleton } from './Skeletons';
 import { Header, Modal, Tabs } from './ui';
+import { useFeedback } from '../app/feedback';
 
 /* ---------- tipos do que a API devolve ---------- */
 interface ToolInfo { name: string; label: string; group: string; description: string; roles: Role[] }
-interface Catalog { tools: ToolInfo[]; models: string[]; ready: boolean; dailyLimit: number }
+interface Catalog { tools: ToolInfo[]; models: string[]; ready: boolean; enabled?: boolean; dailyLimit: number; defaults?: { model: string; effort: Draft['effort'] } }
 interface Knowledge { title: string; text: string }
 interface Agent {
   id: number; name: string; description: string; model: string; tools: string[];
@@ -83,6 +84,8 @@ export function Agentes() {
   useEffect(() => { void load(); }, [load]);
 
   const open = agents.find((a) => a.id === openId) ?? null;
+  /** Modelo e esforço padrão da empresa (Configurações > Inteligência artificial) para o que for criado agora. */
+  const fresh: Partial<Draft> = catalog?.defaults ? { model: catalog.defaults.model, effort: catalog.defaults.effort } : {};
   const toolLabel = (n: string) => catalog?.tools.find((t) => t.name === n)?.label ?? n;
 
   if (open && catalog) {
@@ -96,9 +99,12 @@ export function Agentes() {
   return (
     <>
       <Header title="Agentes de IA" subtitle="Assistentes que consultam a operação e respondem em linguagem natural. Só leem dados: nada é alterado por eles."
-        actions={isManager && <button type="button" className="primary" onClick={() => setEditing({ ...EMPTY })}>+ Novo agente</button>} />
+        actions={isManager && <button type="button" className="primary" onClick={() => setEditing({ ...EMPTY, ...fresh })}>+ Novo agente</button>} />
       {error && <p className="error" role="alert">{error}</p>}
-      {catalog && !catalog.ready && (
+      {catalog && catalog.enabled === false && (
+        <div className="banner info" role="status"><span>A IA está desligada pela gestão. Os agentes podem ser editados, mas ninguém conversa com eles até religar em Configurações &gt; Inteligência artificial.</span></div>
+      )}
+      {catalog && catalog.enabled !== false && !catalog.ready && (
         <div className="banner info" role="status"><span>A IA ainda não está ligada neste ambiente: falta a chave <code>ANTHROPIC_API_KEY</code> na API. Dá para criar e configurar os agentes; a conversa funciona assim que a chave for definida.</span></div>
       )}
       {isManager && usage && (
@@ -116,7 +122,7 @@ export function Agentes() {
             <p className="muted">Comece de um modelo pronto e ajuste o que quiser. Cada agente tem instruções, ferramentas de consulta, quem pode usar e uma base de conhecimento.</p>
             <div className="conf-grid">
               {TEMPLATES.map((t) => (
-                <button type="button" key={t.key} className="conf-tile" onClick={() => setEditing({ ...EMPTY, ...t.draft })}>
+                <button type="button" key={t.key} className="conf-tile" onClick={() => setEditing({ ...EMPTY, ...fresh, ...t.draft })}>
                   <span className="conf-ico"><Icon name="star" size={20} /></span><b>{t.title}</b><span className="muted small">{t.text}</span>
                 </button>
               ))}
@@ -167,6 +173,7 @@ type EditorTab = (typeof EDITOR_TABS)[number];
  * abas ficam no topo, só o conteúdo rola e o rodapé fica fixo com Voltar / Avançar / Salvar.
  */
 function Editor({ draft, catalog, onClose, onSaved }: { draft: Draft & { id?: number }; catalog: Catalog; onClose: () => void; onSaved: () => void }) {
+  const { confirm, toast } = useFeedback();
   const [d, setD] = useState(draft);
   const [tab, setTab] = useState<EditorTab>('principal');
   const [error, setError] = useState('');
@@ -196,8 +203,8 @@ function Editor({ draft, catalog, onClose, onSaved }: { draft: Draft & { id?: nu
     } catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível salvar.'); } finally { setSaving(false); }
   };
   const remove = async () => {
-    if (!d.id || !confirm(`Remover o agente ${d.name}? O histórico de uso também sai.`)) return;
-    try { await call('DELETE', `/agents/${d.id}`); onSaved(); } catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível remover.'); }
+    if (!d.id || !(await confirm({ title: `Remover o agente ${d.name}?`, message: 'O histórico de uso dele também sai. Não dá para desfazer.', confirmLabel: 'Remover agente', danger: true }))) return;
+    try { await call('DELETE', `/agents/${d.id}`); toast('Agente removido.'); onSaved(); } catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível remover.'); }
   };
 
   return (

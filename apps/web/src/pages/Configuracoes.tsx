@@ -6,12 +6,14 @@ import type { Req } from '../app/api';
 import { Icon, type IconName } from '../app/icons';
 import { PALETTES, useThemePref } from '../app/themePref';
 import { useNavStyle } from '../app/navPref';
+import { useFeedback } from '../app/feedback';
 import { Header, Modal } from './ui';
 import { Auditoria, Usuarios } from './Usuarios';
 import { NavStyleCard } from './NavStyle';
 import { ThemeCard } from './ThemeCard';
+import { IaConfig } from './IaConfig';
 
-const TABS = ['Bairros e zonas', 'Veículos', 'Equipe', 'Usuários', 'Auditoria', 'Horários de saída', 'WhatsApp', 'Aparência'] as const;
+const TABS = ['Bairros e zonas', 'Veículos', 'Equipe', 'Usuários', 'Auditoria', 'Horários de saída', 'WhatsApp', 'Inteligência artificial', 'Aparência'] as const;
 type Tab = (typeof TABS)[number];
 
 /** Cartões do hub: ícone, descrição curta e a chave usada na URL (?secao=). */
@@ -23,6 +25,7 @@ const HUB: Record<Tab, { key: string; icon: IconName; desc: string }> = {
   'Auditoria': { key: 'auditoria', icon: 'shield', desc: 'Histórico de ações feitas no sistema.' },
   'Horários de saída': { key: 'horarios', icon: 'clock', desc: 'Horários em que os romaneios costumam sair.' },
   'WhatsApp': { key: 'whatsapp', icon: 'phone', desc: 'Avisos automáticos para o cliente.' },
+  'Inteligência artificial': { key: 'ia', icon: 'star', desc: 'Liga a IA, escolhe o modelo, o limite diário e o contexto dos agentes.' },
   'Aparência': { key: 'aparencia', icon: 'sliders', desc: 'Tema, modo claro/escuro e menu.' },
 };
 
@@ -42,12 +45,17 @@ export function Configuracoes() {
   const [hood, setHood] = useState<string | null>(null);
   const [problem, setProblem] = useState('');
 
-  /** Ação direta no servidor (editar, desativar, remover), com confirmação opcional. */
-  const act = async (request: Req, ask?: string) => {
-    if (ask && !confirm(ask)) return;
+  const { confirm, ask: askText, toast } = useFeedback();
+  /** Ação direta no servidor (editar, desativar, remover), com confirmação opcional e aviso de que deu certo. */
+  const act = async (request: Req, ask?: { title: string; message?: string; confirmLabel: string }, done = 'Alteração salva.') => {
+    if (ask && !(await confirm({ ...ask, danger: request.method === 'DELETE' }))) return;
     setProblem('');
     const err = await command(request);
-    if (err) setProblem(err);
+    if (err) setProblem(err); else toast(done);
+  };
+  const rename = async (title: string, label: string, current: string, request: (name: string) => Req) => {
+    const name = await askText({ title, label, initial: current });
+    if (name && name !== current) await act(request(name), undefined, 'Nome alterado.');
   };
   const busyVehicles = new Set(data.routes.filter((r) => r.status !== 'finished').map((r) => r.vehicleId));
 
@@ -67,6 +75,7 @@ export function Configuracoes() {
               'Auditoria': 'Histórico de ações',
               'Horários de saída': `${data.departures.length} horários`,
               'WhatsApp': 'Demonstração',
+              'Inteligência artificial': 'Modelo, limite e contexto',
               'Aparência': `${PALETTES.find((p) => p.value === themePref.palette)?.label ?? ''} · ${navStyle === 'side' ? 'Menu lateral' : 'Barra embaixo'}`,
             };
             return (
@@ -93,12 +102,12 @@ export function Configuracoes() {
             return (
               <div className="conf-zone" key={z}>
                 <strong>{z}</strong> <span className="muted small">{hoods.length} bairros cadastrados</span>
-                <button type="button" className="link" onClick={() => { const name = prompt('Novo nome da região', z); if (name && name.trim() !== z) void act({ method: 'PUT', path: `/config/zones/${encodeURIComponent(z)}`, body: { name } }); }}>Renomear</button>
-                <button type="button" className="link" onClick={() => void act({ method: 'DELETE', path: `/config/zones/${encodeURIComponent(z)}` }, `Remover a região ${z}?`)}>Remover</button>
+                <button type="button" className="link" onClick={() => void rename('Renomear região', 'Novo nome da região', z, (name) => ({ method: 'PUT', path: `/config/zones/${encodeURIComponent(z)}`, body: { name } }))}>Renomear</button>
+                <button type="button" className="link" onClick={() => void act({ method: 'DELETE', path: `/config/zones/${encodeURIComponent(z)}` }, { title: `Remover a região ${z}?`, confirmLabel: 'Remover região' }, 'Região removida.')}>Remover</button>
                 <div className="chips">{hoods.map((n) => (
                   <span className="pill blue" key={n.name}>{n.name}{' '}
                     <button type="button" className="link" aria-label={`Editar ${n.name}`} onClick={() => setHood(n.name)}>✎</button>{' '}
-                    <button type="button" className="link" aria-label={`Remover ${n.name}`} onClick={() => void act({ method: 'DELETE', path: `/config/neighborhoods/${encodeURIComponent(n.name)}` }, `Remover o bairro ${n.name}?`)}>×</button>
+                    <button type="button" className="link" aria-label={`Remover ${n.name}`} onClick={() => void act({ method: 'DELETE', path: `/config/neighborhoods/${encodeURIComponent(n.name)}` }, { title: `Remover o bairro ${n.name}?`, confirmLabel: 'Remover bairro' }, 'Bairro removido.')}>×</button>
                   </span>
                 ))}</div>
               </div>
@@ -118,12 +127,13 @@ export function Configuracoes() {
               <span key="e" className="actions">
                 <button type="button" onClick={() => setForm({ kind: 'vehicle', vehicle: v })}>Editar</button>
                 <button type="button" onClick={() => void act({ method: 'PATCH', path: `/config/vehicles/${v.id}/active`, body: { active: v.active === false } })}>{v.active === false ? 'Reativar' : 'Desativar'}</button>
-                <button type="button" onClick={() => void act({ method: 'DELETE', path: `/config/vehicles/${v.id}` }, `Remover ${v.name}? Só é possível se nunca foi usado.`)}>Remover</button>
+                <button type="button" onClick={() => void act({ method: 'DELETE', path: `/config/vehicles/${v.id}` }, { title: `Remover ${v.name}?`, message: 'Só é possível se nunca foi usado.', confirmLabel: 'Remover veículo' }, 'Veículo removido.')}>Remover</button>
               </span>])} />
           <p className="muted small">Capacidade usada apenas como referência em caixas. Peso, compartimentos e acondicionamento exigem validação operacional.</p>
         </section>
       )}
 
+      {tab === 'Inteligência artificial' && <IaConfig />}
       {tab === 'Aparência' && <><ThemeCard /><NavStyleCard /></>}
       {tab === 'Usuários' && <Usuarios />}
       {tab === 'Auditoria' && <Auditoria />}
@@ -134,9 +144,9 @@ export function Configuracoes() {
           <Table head={['Nome', 'Função', 'Status', '']} rows={data.drivers.map((d) => [d.name, 'Motorista',
             <span key="s" className={`pill ${d.active === false ? 'gray' : 'green'}`}>{d.active === false ? 'Desativado' : 'Ativo'}</span>,
             <span key="a" className="actions">
-              <button type="button" onClick={() => { const name = prompt('Nome do motorista', d.name); if (name && name.trim() !== d.name) void act({ method: 'PATCH', path: `/config/drivers/${d.id}`, body: { name } }); }}>Renomear</button>
+              <button type="button" onClick={() => void rename('Renomear motorista', 'Nome do motorista', d.name, (name) => ({ method: 'PATCH', path: `/config/drivers/${d.id}`, body: { name } }))}>Renomear</button>
               <button type="button" onClick={() => void act({ method: 'PATCH', path: `/config/drivers/${d.id}`, body: { active: d.active === false } })}>{d.active === false ? 'Reativar' : 'Desativar'}</button>
-              <button type="button" onClick={() => void act({ method: 'DELETE', path: `/config/drivers/${d.id}` }, `Remover ${d.name}? Só é possível se nunca fez uma viagem.`)}>Remover</button>
+              <button type="button" onClick={() => void act({ method: 'DELETE', path: `/config/drivers/${d.id}` }, { title: `Remover ${d.name}?`, message: 'Só é possível se nunca fez uma viagem.', confirmLabel: 'Remover motorista' }, 'Motorista removido.')}>Remover</button>
             </span>])} />
           <p className="muted small">O cadastro de motorista é a ficha da operação; para a pessoa entrar no sistema, crie o usuário na aba Usuários.</p>
         </section>
