@@ -4,7 +4,7 @@ import {
   releaseTrip, retryNotice, saveBoxes as saveBoxesLocal, setChecks, startTrip, syncSignatures, updatePaper as updatePaperLocal,
   type BoxInput, type Clock, type Dataset, type DeliveryForm, type PaperForm, type PaperValues, type PlanDraft, type Role, type StopOutcome, type TripResult,
 } from '@rotacerta/domain';
-import { ApiError, call, fetchSnapshot, login as apiLogin, logout as apiLogout, openSocket, renewSession, send, type Req, type SessionUser } from './api';
+import { ApiError, call, fetchSnapshot, fetchEnv, login as apiLogin, logout as apiLogout, quickLogin as apiQuickLogin, openSocket, renewSession, send, type EnvInfo, type Req, type SessionUser } from './api';
 
 /** Estado que fica só neste aparelho: rascunhos. Sessão (cookie httpOnly) e dados da operação vêm do servidor. */
 const KEY = 'rotacerta:v4';
@@ -58,6 +58,10 @@ interface Store {
   changePassword: (current: string, password: string) => Promise<string | null>;
   /** Entra com e-mail e senha; devolve a mensagem de erro, ou null. */
   login: (email: string, password: string) => Promise<string | null>;
+  /** Ambiente (teste ou produção) e, no teste, os perfis para entrar com um clique. Nulo até a API responder. */
+  env: EnvInfo | null;
+  /** Só no ambiente de teste: entra (ou troca de perfil) sem senha. */
+  quickLogin: (who: string | { email: string }) => Promise<string | null>;
   logout: () => void;
   saveDraft: (form: DeliveryForm | null) => void;
   /** Guarda (ou limpa) a carga em planejamento. */
@@ -119,6 +123,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // começa em 'loading' enquanto tenta retomar a sessão pelo cookie
   const [connection, setConnection] = useState<Connection>('loading');
   const [problem, setProblem] = useState<string | null>(null);
+  const [env, setEnv] = useState<EnvInfo | null>(null);
+  useEffect(() => { void fetchEnv().then(setEnv); }, []);
 
   const locationListeners = useRef(new Set<(m: LocationMsg) => void>());
   const userRef = useRef<SessionUser | null>(null);
@@ -260,6 +266,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return e instanceof Error ? e.message : 'Não foi possível entrar.';
         }
       },
+      env,
+      quickLogin: async (who) => {
+        try {
+          const session = await apiQuickLogin(who);
+          // troca de perfil no meio do uso: zera os dados do perfil anterior e carrega os do novo
+          setSnapshot({ data: EMPTY_DATA, papers: [] });
+          setConnection('loading');
+          setUser(session.user);
+          setMustChange(false);
+          setLocal((s) => ({ ...s, driverId: session.user.driverId ?? s.driverId }));
+          return null;
+        } catch (e) {
+          return e instanceof Error ? e.message : 'Não foi possível entrar.';
+        }
+      },
       logout: () => logout(true),
       command: async (request) => {
         try { await enqueue(() => send(request)); return null; }
@@ -328,7 +349,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         { method: 'POST', path: `/orders/${orderId}/stop`, body: outcome },
       ),
     };
-  }, [snapshot, local, user, mustChange, connection, problem, commit, enqueue, refresh, logout]);
+  }, [snapshot, local, user, mustChange, connection, problem, env, commit, enqueue, refresh, logout]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

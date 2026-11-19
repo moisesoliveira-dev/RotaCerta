@@ -59,9 +59,9 @@ export async function createTestDb(): Promise<Db> {
   return db;
 }
 
-export async function createTestApp(opts: { llm?: LlmClient | null } = {}) {
+export async function createTestApp(opts: { llm?: LlmClient | null; config?: Partial<Config> } = {}) {
   const db = await createTestDb();
-  const app = await buildApp({ config: testConfig, db, llm: opts.llm ?? null });
+  const app = await buildApp({ config: { ...testConfig, ...opts.config }, db, llm: opts.llm ?? null });
   return { app, db };
 }
 

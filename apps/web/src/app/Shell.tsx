@@ -7,6 +7,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { SideNav, SideNavHeading, SideNavItem } from '@astryxdesign/core/SideNav';
 import { TopNav } from '@astryxdesign/core/TopNav';
 import { Icon, Logo, svgIcon, type IconName } from './icons';
+import { TestProfileSwitch } from './TestProfileSwitch';
 
 /** Liga os links do Astryx ao react-router (sem recarregar a página). */
 function RouterLink({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement> & { href?: string }) {
@@ -20,6 +21,7 @@ interface ShellProps {
   mode: 'side' | 'dock';
   homePath: string;
   roleLabel: string;
+  role: string;
   userName: string;
   items: ShellItem[];
   action: ShellItem;
@@ -33,7 +35,7 @@ interface ShellProps {
 }
 
 /** Casca do app com os componentes do Astryx: menu lateral (ou só a barra de cima), topo e conteúdo. */
-export function Shell({ mode, homePath, roleLabel, userName, items, action, showBell, onSearch, onLogout, banner, dock, children }: ShellProps) {
+export function Shell({ mode, homePath, roleLabel, role, userName, items, action, showBell, onSearch, onLogout, banner, dock, children }: ShellProps) {
   const { pathname } = useLocation();
   const selected = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
 
@@ -64,6 +66,7 @@ export function Shell({ mode, homePath, roleLabel, userName, items, action, show
       heading={mode === 'dock' ? <Link to={homePath} className="logo-link" aria-label="RotaCerta, início"><Logo /></Link> : undefined}
       endContent={(
         <>
+          <TestProfileSwitch currentRole={role} />
           <Badge label={roleLabel} variant="neutral" />
           {showBell && <Button as={RouterLink} href="/notificacoes" label="Notificações" isIconOnly variant="ghost" icon={svgIcon('bell')({})} />}
           <Avatar as={RouterLink} href="/perfil" name={userName} size="sm" />

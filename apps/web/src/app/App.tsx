@@ -217,7 +217,7 @@ export function App() {
   return (
     <div className={`shell nav-${navStyle} ${tour.active ? 'with-tour' : ''}`}>
       <Shell
-        mode={navStyle} homePath={homePath(role)} roleLabel={ROLE_LABELS[role]} userName={user.name} items={items} action={dock.action}
+        mode={navStyle} homePath={homePath(role)} roleLabel={ROLE_LABELS[role]} role={role} userName={user.name} items={items} action={dock.action}
         showBell={canAccess(role, 'notificacoes')} onSearch={() => setSearching(true)} onLogout={logout} dock={dockBar}
       >
         <main className="main" id="conteudo" tabIndex={-1}>

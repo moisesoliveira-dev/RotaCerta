@@ -199,3 +199,7 @@ ion-modal.r-sheet .ion-page { position: relative; contain: content; }
 .r-sticky-foot { position: sticky; bottom: 0; padding: 12px 0 calc(4px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--r-bg) 30%); display: flex; flex-direction: column; gap: 8px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 .r-card.r-row-between { flex-direction: row; }
+
+/* ambiente de teste: entrar como cada perfil */
+.r-quick { display: grid; gap: 10px; padding: 12px; border: 1px dashed var(--r-line, #d0dbef); border-radius: 14px; }
+.r-quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

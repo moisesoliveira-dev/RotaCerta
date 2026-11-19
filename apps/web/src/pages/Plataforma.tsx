@@ -3,6 +3,7 @@ import type { AnyRole } from '@rotacerta/domain';
 import { call } from '../app/api';
 import { Icon, Logo, type IconName } from '../app/icons';
 import { useStore } from '../app/store';
+import { TestProfileSwitch } from '../app/TestProfileSwitch';
 import { Empty, Header, Modal } from './ui';
 import { SkeletonLines, TableSkeleton } from './Skeletons';
 
@@ -33,6 +34,7 @@ export function PlatformApp() {
       <header className="topbar">
         <Logo sub="Plataforma" />
         <span className="grow" />
+        <TestProfileSwitch currentRole="plataforma" />
         <span className="role-tag">{user?.name}</span>
         <button type="button" onClick={logout}>Sair</button>
       </header>

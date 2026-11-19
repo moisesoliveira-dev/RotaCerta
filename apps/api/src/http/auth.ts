@@ -87,6 +87,51 @@ export function registerAuthRoutes({ app, db, config, guard, company }: Ctx) {
     return session(user);
   });
 
+  /* ---------- ambiente de TESTE: entrar com um clique, sem senha ----------
+   * Só existe quando AMBIENTE=teste. Em produção estas rotas nem são registradas (404) e `/api/env` informa
+   * "producao" sem listar ninguém. */
+  const testMode = config.APP_ENV === 'test';
+  const QUICK_ORDER: AnyRole[] = ['gestao', 'atendente', 'expedicao', 'motorista', 'plataforma'];
+
+  /** Primeiro usuário ativo de cada perfil (a demonstração tem um por perfil). */
+  const quickProfiles = async () => {
+    const rows = await db.select().from(schema.users).where(eq(schema.users.active, true)).orderBy(schema.users.id);
+    return QUICK_ORDER.flatMap((role) => {
+      const u = rows.find((r) => r.role === role);
+      return u ? [{ role, label: ANY_ROLE_LABELS[role], name: u.name }] : [];
+    });
+  };
+
+  /** Público: o login pergunta qual é o ambiente para decidir se mostra os botões de perfil. */
+  app.get('/api/env', async (_req, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return { environment: testMode ? 'teste' : 'producao', quickLogin: testMode ? await quickProfiles() : [] };
+  });
+
+  if (testMode) {
+    app.post('/api/auth/quick-login', async (req, reply) => {
+      // por perfil (botões do login) ou por e-mail (formulário com a senha em branco); "gestao" vale como gestao@rotacerta.local
+      const body = (req.body ?? {}) as { role?: string; email?: string };
+      let user: UserRow | undefined;
+      if (typeof body.email === 'string' && body.email.trim()) {
+        const typed = body.email.trim().toLowerCase().slice(0, 200);
+        const email = typed.includes('@') ? typed : `${typed}@rotacerta.local`;
+        [user] = await db.select().from(schema.users).where(and(eq(schema.users.email, email), eq(schema.users.active, true)));
+        if (!user) return reply.code(404).send({ error: `Não há usuário ativo "${typed}" neste ambiente de teste. Use um dos perfis acima.` });
+      } else {
+        const role = body.role as AnyRole | undefined;
+        if (!role || !QUICK_ORDER.includes(role)) return reply.code(400).send({ error: 'Escolha um perfil válido.' });
+        [user] = await db.select().from(schema.users).where(and(eq(schema.users.role, role), eq(schema.users.active, true))).orderBy(schema.users.id).limit(1);
+        if (!user) return reply.code(404).send({ error: 'Não há usuário ativo com esse perfil neste ambiente de teste.' });
+      }
+      if (!(await companyActive(user))) return reply.code(403).send({ error: 'A empresa de demonstração está suspensa.' });
+      setCookie(reply, await startSession(db, user.id, config.REFRESH_DAYS, ua(req)));
+      await audit(db, { companyId: user.companyId, action: 'auth.quick_login', userId: user.id, userName: user.name, status: 200, ip: req.ip }, req.log);
+      // no teste não pede a troca de senha provisória
+      return { ...session(user), mustChangePassword: false };
+    });
+  }
+
   app.post('/api/auth/refresh', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (req, reply) => {
     if (!sameApp(req, reply)) return;
     const raw = req.cookies[COOKIE];

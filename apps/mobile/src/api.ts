@@ -74,6 +74,25 @@ export async function login(email: string, password: string): Promise<Session> {
   return session;
 }
 
+/** Ambiente: no TESTE traz os perfis para entrar com um clique; em produção, lista vazia. */
+export interface EnvInfo { environment: 'teste' | 'producao'; quickLogin: Array<{ role: string; label: string; name: string }> }
+export async function fetchEnv(): Promise<EnvInfo> {
+  try {
+    const res = await raw('GET', '/env', undefined, false);
+    if (!res.ok) return { environment: 'producao', quickLogin: [] };
+    const json = (await res.json()) as Partial<EnvInfo>;
+    return { environment: json.environment === 'teste' ? 'teste' : 'producao', quickLogin: Array.isArray(json.quickLogin) ? json.quickLogin : [] };
+  } catch { return { environment: 'producao', quickLogin: [] }; }
+}
+
+/** Só existe no ambiente de TESTE (em produção a API responde 404). */
+export async function quickLogin(who: string | { email: string }): Promise<Session> {
+  const body = typeof who === 'string' ? { role: who } : who;
+  const session = await parse(await raw('POST', '/auth/quick-login', body, false), sessionResponse);
+  token = session.token;
+  return session;
+}
+
 export async function logout(): Promise<void> {
   try { await raw('POST', '/auth/logout', undefined, false); } catch { /* sem rede: descarta a sessão local mesmo assim */ }
   token = null;

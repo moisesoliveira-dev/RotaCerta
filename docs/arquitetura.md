@@ -177,6 +177,19 @@ Na ficha da entrega, a equipe gera um link (`POST /api/orders/:id/tracking-link`
 - **O que o cliente vê:** primeiro nome, situação em 4 passos, janela, quantas entregas antes da dele e, **só quando ele é a parada atual**, a posição do entregador no mapa. Nunca endereço, telefone ou dados de outros clientes.
 - **GPS no aparelho do motorista:** a fila de pontos não enviados fica guardada no aparelho (web e app), então fechar ou recarregar o app sem sinal não perde o percurso.
 
+### 3.17 Ambiente de teste e de produção (`AMBIENTE`)
+Uma variável só decide o modo da API: `AMBIENTE=teste` ou `AMBIENTE=producao` (aceita também `test`, `production`, `prod`).
+- **Teste:** dados de demonstração, banco embutido quando não há `DATABASE_URL`, e tudo liberado para quem testa:
+  - o login mostra um botão por perfil (Gestão, Atendente, Expedição, Motorista, Plataforma) e entra **sem senha**
+    (`GET /api/env` lista os perfis; `POST /api/auth/quick-login`); no app, um seletor no topo troca de perfil sem sair;
+  - sem bloqueio de conta e com limites de tentativas e de uso muito altos (`LOGIN_RATE_MAX`, `WRITE_RATE_MAX`,
+    `AGENT_DAILY_LIMIT`, `LOGIN_LOCK_FAILURES`), a menos que sejam definidos explicitamente;
+  - botão "Simular deslocamento" no acompanhamento de viagens.
+- **Produção:** exige `DATABASE_URL` e `JWT_SECRET`, sem seed e com cookie seguro. A entrada rápida **não existe**: a rota
+  `quick-login` nem é registrada (404) e `/api/env` responde `producao` sem listar ninguém.
+- **Segurança:** o modo de teste abre a porta da frente de propósito. **Nunca** use `AMBIENTE=teste` num endereço público com
+  dados reais. Misturar `AMBIENTE` com uma chave antiga que diga o contrário impede a API de subir, para não rodar no modo errado.
+
 ## 4. Convenções
 
 - **Idioma:** código em inglês onde já existe; textos exibidos ao usuário, mensagens de erro e documentação em português.
@@ -222,10 +235,10 @@ Autenticação por e-mail e senha (hash `scrypt`, mínimo de 10 caracteres). Log
 ## 6. Rodando localmente
 
 ### 6.00 Docker (tudo junto)
-`docker compose up -d --build` sobe Postgres (porta 5440 no host), API (3333) e web (http://localhost:8088). O ambiente vem de `AMBIENTE_TESTE` / `AMBIENTE_PRODUCAO` (padrão: teste, com dados de demonstração). Para produção: `AMBIENTE_TESTE=false AMBIENTE_PRODUCAO=true JWT_SECRET=... POSTGRES_PASSWORD=... docker compose up -d --build`. Portas configuráveis por `POSTGRES_PORT` e `WEB_PORT`. Só o banco: `docker compose up -d postgres`.
+`docker compose up -d --build` sobe Postgres (porta 5440 no host), API (3333) e web (http://localhost:8088). O ambiente vem de `AMBIENTE` (`teste` ou `producao`) (padrão: teste, com dados de demonstração). Para produção: `AMBIENTE=producao JWT_SECRET=... POSTGRES_PASSWORD=... docker compose up -d --build`. Portas configuráveis por `POSTGRES_PORT`, `WEB_PORT` e `API_PORT` (use `API_PORT=3334` se a 3333 estiver ocupada pela API de desenvolvimento). Só o banco: `docker compose up -d postgres`.
 
 ### 6.0 Ambientes (teste e produção)
-Em `apps/api/.env` ative **exatamente um**: `AMBIENTE_TESTE=true` ou `AMBIENTE_PRODUCAO=true` (o outro `false`).
+Em `apps/api/.env` defina **uma chave só**: `AMBIENTE=teste` ou `AMBIENTE=producao` (as antigas `AMBIENTE_TESTE` / `AMBIENTE_PRODUCAO` continuam aceitas quando `AMBIENTE` não existe; se contradisserem `AMBIENTE`, a API não sobe).
 - **Teste:** `DATABASE_URL` e `JWT_SECRET` opcionais. Sem `DATABASE_URL`, usa banco embutido (PGlite) com migração e dados de demonstração automáticos (senha `rotacerta123`, ou `SEED_PASSWORD`). Basta `pnpm dev`.
 - **Produção:** exige `DATABASE_URL` (Postgres real) e `JWT_SECRET` (32+); seed bloqueado; cookie seguro por padrão. Rode `db:migrate` antes de subir.
 
@@ -275,10 +288,10 @@ variável `RAILWAY_DOCKERFILE_PATH`, e o health check fica em *Settings → Depl
 
 | Serviço | `RAILWAY_DOCKERFILE_PATH` | Healthcheck | Variáveis principais |
 |---|---|---|---|
-| `api` | `apps/api/Dockerfile` | `/ready` | `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `JWT_SECRET`, `CORS_ORIGIN`, `COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`, `AMBIENTE_PRODUCAO=true` (ou `AMBIENTE_TESTE=true` num ambiente de demonstração; exatamente um) |
+| `api` | `apps/api/Dockerfile` | `/ready` | `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `JWT_SECRET`, `CORS_ORIGIN`, `COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`, `AMBIENTE=producao` (ou `AMBIENTE=teste` num ambiente de demonstração) |
 | `web` | `apps/web/Dockerfile` | `/` | `VITE_API_URL` (usada no build; sem barra no final) |
 
-- Sem `AMBIENTE_TESTE` / `AMBIENTE_PRODUCAO` a API não sobe ("Ative exatamente um ambiente"). `NODE_ENV` não precisa
+- Sem `AMBIENTE` (nem as chaves antigas) a API não sobe ("Defina o ambiente"). `NODE_ENV` não precisa
   ser definido: o ambiente ativo decide.
 - O container aplica as migrações antes de iniciar (`migrate-cli`; com várias réplicas, rode-o como *pre-deploy command* do Railway e deixe só o `node dist/server.js` no start) e a API responde `/ready` (200 só com o banco acessível).
 - O site é estático (nginx) com fallback para `index.html`; `sw.js` e o manifesto são servidos com `no-cache`.

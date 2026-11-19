@@ -6,14 +6,22 @@ import { SlideUpText } from '../app/SlideUpText';
 import { useStore } from '../app/store';
 import { InstallCard } from './InstallCard';
 
+/** O que cada perfil faz, para escolher com um olhar (o nome da pessoa de demonstração não ajuda). */
+const ROLE_HINT: Record<string, string> = {
+  gestao: 'Painel, usuários e configurações', atendente: 'Cadastro de entregas e clientes', expedicao: 'Cargas, conferência e viagens',
+  motorista: 'Entregas na rua', plataforma: 'Painel de empresas',
+};
+
 export function Login() {
-  const { login, problem, clearProblem } = useStore();
+  const { login, problem, clearProblem, env, quickLogin } = useStore();
+  const [quickBusy, setQuickBusy] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
+  const testing = env?.environment === 'teste' && env.quickLogin.length > 0;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -21,8 +29,19 @@ export function Login() {
     setError('');
     clearProblem();
     setBusy(true);
-    const err = await login(email.trim(), password);
+    // ambiente de teste: senha em branco entra só com o e-mail (ou o início dele, como "gestao")
+    const err = testing && !password ? await quickLogin({ email: email.trim() }) : await login(email.trim(), password);
     setBusy(false);
+    if (err) setError(err);
+  };
+
+  const enter = async (role: string) => {
+    if (quickBusy) return;
+    setError('');
+    clearProblem();
+    setQuickBusy(role);
+    const err = await quickLogin(role);
+    setQuickBusy(null);
     if (err) setError(err);
   };
 
@@ -43,15 +62,29 @@ export function Login() {
           <div className="signin-heading">
             <span className="signin-eyebrow">RotaCerta · Acesso à loja</span>
             <h2><SlideUpText delay={0.3}>{'Sua operação\ncomeça aqui.'}</SlideUpText></h2>
-            <p className="muted">Use o e-mail e a senha fornecidos pela loja.</p>
+            <p className="muted">{testing ? 'Ambiente de teste: a senha é opcional.' : 'Use o e-mail e a senha fornecidos pela loja.'}</p>
           </div>
+          {testing && (
+            <section className="quick-login" aria-label="Ambiente de teste: entrar como">
+              <div className="quick-head"><span className="quick-tag">Ambiente de teste</span><span className="muted small">Entre com um clique, sem senha</span></div>
+              <div className="quick-grid">
+                {env.quickLogin.map((p) => (
+                  <button key={p.role} type="button" className="quick-btn" disabled={quickBusy !== null} aria-busy={quickBusy === p.role} onClick={() => void enter(p.role)}>
+                    <b>{quickBusy === p.role ? 'Entrando…' : p.label}</b>
+                    <span className="muted small">{ROLE_HINT[p.role] ?? p.name}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="quick-or"><span>ou entre com e-mail e senha</span></p>
+            </section>
+          )}
           <form onSubmit={submit}>
             <label className="field">E-mail
-              <input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              <input type={testing ? 'text' : 'email'} autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={testing ? 'gestao ou gestao@rotacerta.local' : undefined} />
             </label>
-            <label className="field">Senha
+            <label className="field"><span>Senha{testing && <span className="muted small"> (opcional no teste)</span>}</span>
               <span className="pw">
-                <input type={visible ? 'text' : 'password'} autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                <input type={visible ? 'text' : 'password'} autoComplete="current-password" required={!testing} value={password} onChange={(e) => setPassword(e.target.value)} />
                 <button type="button" aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={visible} onClick={() => setVisible((v) => !v)}>
                   <Icon name={visible ? 'eyeOff' : 'eye'} />
                 </button>

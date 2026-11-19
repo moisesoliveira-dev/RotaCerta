@@ -1,7 +1,8 @@
 # Sobe tudo: banco + API + web.
 #   Teste (padrão):  docker compose up -d --build        -> web http://localhost:8088, API http://localhost:3333
-#   Produção:        AMBIENTE_TESTE=false AMBIENTE_PRODUCAO=true JWT_SECRET=... POSTGRES_PASSWORD=... docker compose up -d --build
+#   Produção:        AMBIENTE=producao JWT_SECRET=... POSTGRES_PASSWORD=... docker compose up -d --build
 # Só o banco (API/web rodando com pnpm):  docker compose up -d postgres
+# Portas no seu computador (troque se alguma estiver ocupada): WEB_PORT (8088), API_PORT (3333), POSTGRES_PORT (5440)
 # As variáveis podem ficar num arquivo .env na raiz (não versionado).
 services:
   postgres:
@@ -28,8 +29,10 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      AMBIENTE_TESTE: ${AMBIENTE_TESTE:-true}
-      AMBIENTE_PRODUCAO: ${AMBIENTE_PRODUCAO:-false}
+      AMBIENTE: ${AMBIENTE:-teste}
+      # chaves antigas: só repassadas se existirem (vazias são ignoradas); se contradisserem AMBIENTE, a API não sobe
+      AMBIENTE_TESTE: ${AMBIENTE_TESTE:-}
+      AMBIENTE_PRODUCAO: ${AMBIENTE_PRODUCAO:-}
       DATABASE_URL: postgres://rotacerta:${POSTGRES_PASSWORD:-rotacerta}@postgres:5432/rotacerta
       JWT_SECRET: ${JWT_SECRET:-}
       SEED_PASSWORD: ${SEED_PASSWORD:-}
@@ -37,7 +40,9 @@ services:
       COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
       COOKIE_SECURE: ${COOKIE_SECURE:-}
     ports:
-      - "3333:3333"
+      # porta da API no seu computador (dentro da rede do compose o web fala com ela em api:3333).
+      # Troque com API_PORT se a 3333 já estiver em uso, por exemplo pela API de desenvolvimento.
+      - "${API_PORT:-3333}:3333"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3333/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 3s

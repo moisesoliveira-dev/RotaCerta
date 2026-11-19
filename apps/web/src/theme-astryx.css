@@ -434,3 +434,23 @@ body { font-family: var(--font-family-body, 'Figtree Variable'), system-ui, sans
 .shell .card, .shell .tile, .shell .rt-stat, .shell .conf-tile, .shell .rt-panel, .shell .rt-map-card, .shell .trk-map-card { border-color: var(--line); box-shadow: 0 1px 2px rgba(10, 26, 60, .06), 0 1px 1px rgba(10, 26, 60, .03); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .shell .card { box-shadow: none; } }
 .shell input:not([type=checkbox]):not([type=radio]), .shell select, .shell textarea { border-color: color-mix(in srgb, var(--line) 70%, var(--color-text-secondary)); }
+
+/* ---------- Ambiente de teste: entrada rápida e seletor de perfil ---------- */
+.quick-login { display: grid; gap: 10px; margin-bottom: 4px; }
+.quick-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.quick-tag { display: inline-flex; padding: 3px 10px; border-radius: 999px; background: #fff3cd; color: #7a5200; font: 700 11px/16px var(--body, system-ui); letter-spacing: .06em; text-transform: uppercase; }
+.quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.signin .quick-btn { display: grid; gap: 2px; justify-items: start; text-align: left; height: auto; min-height: 0; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); cursor: pointer; font: inherit; color: var(--ink); transition: border-color .15s, background-color .15s; }
+.signin .quick-btn:hover:not(:disabled) { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 6%, var(--card)); }
+.signin .quick-btn:disabled { opacity: .6; cursor: wait; }
+.signin .quick-btn b { font-weight: 650; }
+.quick-or { display: flex; align-items: center; gap: 10px; margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
+.quick-or::before, .quick-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+.test-switch { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 999px; background: #fff3cd; color: #7a5200; }
+.test-tag { font: 700 11px/16px var(--body, system-ui); letter-spacing: .06em; text-transform: uppercase; }
+.shell .test-switch select { height: 28px; min-height: 0; padding: 0 26px 0 10px; border: 0; border-radius: 999px; background-color: #fff; color: #3d2a00; font-weight: 600; font-size: 13px; cursor: pointer; }
+.test-error { color: var(--red); font-size: 12px; }
+@media (prefers-color-scheme: dark) { .test-switch, .quick-tag { background: #4a3a10; color: #ffd978; } }
+@media (max-width: 720px) { .test-tag { display: none; } .test-switch { padding-left: 4px; } }
+.signin .quick-btn { grid-template-columns: 100%; justify-content: stretch; align-content: start; }

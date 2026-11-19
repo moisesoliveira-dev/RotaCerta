@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Dataset, StopOutcome } from '@rotacerta/domain';
-import { ApiError, call, fetchSnapshot, login as apiLogin, logout as apiLogout, renewSession, type SessionUser } from './api';
+import { ApiError, call, fetchEnv, fetchSnapshot, login as apiLogin, logout as apiLogout, quickLogin as apiQuickLogin, renewSession, type EnvInfo, type SessionUser } from './api';
 
 interface SessionCtx {
   status: 'booting' | 'out' | 'in';
@@ -9,6 +9,9 @@ interface SessionCtx {
   driverId: number;
   error: string;
   login: (email: string, password: string) => Promise<string | null>;
+  /** Ambiente (teste ou produção); no teste, os perfis para entrar sem senha. */
+  env: EnvInfo | null;
+  quickLogin: (who: string | { email: string }) => Promise<string | null>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   /** Comandos do motorista: devolvem a mensagem de erro do servidor ou null. */
@@ -52,11 +55,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => { clearInterval(t); window.removeEventListener('focus', onFocus); };
   }, [status, refresh]);
 
+  const [env, setEnv] = useState<EnvInfo | null>(null);
+  useEffect(() => { void fetchEnv().then(setEnv); }, []);
+
   const value = useMemo<SessionCtx>(() => ({
-    status, user, data, error,
+    status, user, data, error, env,
     driverId: user?.driverId ?? 0,
     login: async (email, password) => {
       try { const s = await apiLogin(email, password); setUser(s.user); setStatus('in'); await refresh(); return null; }
+      catch (e) { return message(e); }
+    },
+    quickLogin: async (who) => {
+      try { const s = await apiQuickLogin(who); setUser(s.user); setStatus('in'); await refresh(); return null; }
       catch (e) { return message(e); }
     },
     logout: async () => { await apiLogout(); setUser(null); setData(null); setStatus('out'); },
@@ -67,7 +77,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     finishStop: async (orderId, outcome) => {
       try { await call('POST', `/orders/${orderId}/stop`, outcome); await refresh(); return null; } catch (e) { return message(e); }
     },
-  }), [status, user, data, error, refresh]);
+  }), [status, user, data, error, env, refresh]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
