@@ -591,3 +591,21 @@ body { font-family: var(--font-family-body, 'Figtree Variable'), system-ui, sans
   .shell .astryx-avatar { min-width: 40px; min-height: 40px; }
   .shell input:not([type=checkbox]):not([type=radio]), .shell select { min-height: 44px; }
 }
+
+/* ---------- Carregamento: leitura de código + pedidos e detalhe ---------- */
+.cg-scan { position: relative; display: block; margin: 14px 0 8px; }
+.cg-scan svg { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--color-accent); pointer-events: none; }
+.shell .cg-scan input { width: 100%; height: 56px; border-radius: 16px; border: 2px solid var(--color-accent); padding: 0 18px 0 52px; font-size: 18px; font-weight: 650; letter-spacing: .03em; background: var(--card); }
+.cg-flash { padding: 10px 14px; border-radius: 12px; margin-bottom: 14px; font-size: 14px; background: var(--sunk, var(--bg)); color: var(--muted); }
+.cg-flash.ok { background: color-mix(in srgb, var(--green) 14%, var(--card)); color: var(--green); font-weight: 600; }
+.cg-flash.warn { background: var(--color-background-orange); color: var(--color-text-orange); font-weight: 600; }
+.cg-flash.bad { background: color-mix(in srgb, var(--red) 12%, var(--card)); color: var(--red); font-weight: 600; }
+.cg-split { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; }
+.cg-orders { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.shell .cg-order { width: 100%; height: auto; min-height: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; text-align: left; border: 1px solid var(--line); border-radius: 12px; background: var(--card); font-weight: 400; }
+.shell .cg-order.on { border-color: var(--color-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 16%, transparent); }
+.cg-order-text { flex: 1; min-width: 0; display: grid; line-height: 1.3; } .cg-order-text small { color: var(--muted); }
+.cg-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex: none; font-size: 12px; }
+.cg-dot.ok { background: var(--green); border-color: var(--green); color: #fff; } .cg-dot.part { border-color: var(--color-accent); }
+.cg-detail { margin: 0; }
+@media (max-width: 900px) { .cg-split { grid-template-columns: 1fr; } }
