@@ -37,6 +37,20 @@ const EMPTY: Draft = { name: '', description: '', instructions: '', model: 'clau
  */
 const TEMPLATES: Array<{ key: string; title: string; text: string; draft: Partial<Draft> }> = [
   {
+    key: 'resolvedor', title: 'Analista de operações', text: 'Analisa os dados e as regras do sistema para achar o que trava a operação, a causa e o que fazer.',
+    draft: {
+      name: 'Analista de operações', description: 'Cruza os dados da operação com as regras do sistema para diagnosticar e orientar.',
+      instructions: [
+        'Você é o analista de operações do RotaCerta: conhece o modelo de dados, a máquina de estados e as regras de negócio e resolve problemas analisando os dados, não decorando casos.',
+        '- Levante fatos com a consulta de dados (cruze entregas, romaneios, caixas, veículos e motoristas pelas ligações), compare com as regras e ache o que está travando e por quê.',
+        '- Procure a causa raiz e quem é afetado; priorize pela janela de entrega, pelo frio e pela quantidade de clientes.',
+        '- Responda com: diagnóstico em uma frase, evidências (números e códigos), passo a passo na tela certa e, separado, sugestões de melhoria.',
+        '- Diga o que é fato dos dados e o que é inferência. Você só orienta; quem corrige é a equipe.',
+      ].join('\n'),
+      tools: ['consultar_dados', 'diagnosticar_entrega', 'problemas_da_operacao', 'detalhe_entrega', 'viagens_ao_vivo'], roles: ['gestao', 'expedicao', 'atendente'], effort: 'high',
+    },
+  },
+  {
     key: 'operacao', title: 'Assistente da operação', text: 'Responde qualquer pergunta sobre entregas, romaneios e números do dia.',
     draft: {
       name: 'Assistente da operação', description: 'Tira dúvidas sobre entregas, romaneios e o andamento do dia.',

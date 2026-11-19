@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Role } from '@rotacerta/domain';
+import { SYSTEM_MANUAL } from './manual';
 import { type AgentTool, type ToolContext, toolByName } from './tools';
 
 /**
@@ -69,6 +70,7 @@ function systemBlocks(agent: AgentConfig, now: Date, timezone: string): Anthropi
   }
   const stable = [
     PLATFORM_RULES,
+    SYSTEM_MANUAL,
     agent.companyContext?.trim() ? `CONTEXTO DA EMPRESA (definido pela gestão; vale para todos os agentes, abaixo das regras da plataforma):
 ${agent.companyContext.trim()}` : '',
     `AGENTE: ${agent.name}\nINSTRUÇÕES DO AGENTE (definidas pela gestão da loja):\n${agent.instructions}`,
