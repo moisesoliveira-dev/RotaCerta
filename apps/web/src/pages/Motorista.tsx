@@ -64,15 +64,15 @@ function Escolha() {
       {role === 'gestao' && <AsDriver />}
 
       {mine ? (
-        <section className="rt-hero">
-          <span className="rt-badge"><Icon name="truck" size={16} /> Viagem em andamento</span>
-          <div>
-            <strong>{next ? `Próxima: ${next.name}` : 'Todas as paradas registradas'}</strong>
-            <span>Romaneio #{mine.id} · parada {Math.min(done + 1, stops.length)} de {stops.length}{next ? ` · ${next.neighborhood}` : ''}</span>
-          </div>
-          <div className="rt-hero-bar" aria-hidden="true"><i style={{ width: `${stops.length ? (done / stops.length) * 100 : 0}%` }} /></div>
-          <Link className="btn rt-hero-btn rt-hero-wide" to="viagem">Continuar viagem</Link>
-        </section>
+        <>
+          <StopsMap stops={stops} nextId={next?.id} index={Math.min(done + 1, stops.length)} done={done} />
+          <section className="card tm-next">
+            <div className="tm-next-top"><span className="eyebrow">Viagem em andamento · #{mine.id}</span>{next && <span className="muted small">{next.window}</span>}</div>
+            <h2>{next ? next.name : 'Todas as paradas registradas'}</h2>
+            <p className="muted">{next ? `${next.street}, ${next.number} — ${next.neighborhood}` : 'Abra a viagem para ver o resumo.'}</p>
+            <Link className="btn primary tm-main" to="viagem">Continuar viagem</Link>
+          </section>
+        </>
       ) : (
         <section className="rt-hero rt-hero-calm">
           <span className="rt-badge">{available.length ? `${available.length} romaneio(s) disponível(is)` : 'Sem viagem agora'}</span>
@@ -139,6 +139,31 @@ function Previa() {
   );
 }
 
+/** Posição esquemática de uma parada no painel (sem coordenadas reais): um zigue-zague estável, na ordem da rota. */
+function pinAt(i: number, total: number) {
+  const t = total <= 1 ? 0.5 : i / (total - 1);
+  return { x: 10 + t * 80, y: 30 + 40 * Math.abs(Math.sin(i * 1.7 + 0.6)) };
+}
+
+/** Painel esquemático com um ponto por parada: a próxima em destaque, as feitas esmaecidas. */
+function StopsMap({ stops, nextId, index, done }: { stops: Order[]; nextId?: number; index: number; done: number }) {
+  return (
+    <div className="tm-map" role="img" aria-label={`Mapa esquemático: parada ${index} de ${stops.length}`}>
+      {stops.map((o, k) => {
+        const pos = pinAt(k, stops.length);
+        const state = o.id === nextId ? 'now' : o.status === 'delivered' ? 'ok' : o.status === 'failed' ? 'bad' : 'todo';
+        return (
+          <span key={o.id} className={`tm-pin ${state}`} style={{ left: `${pos.x}%`, top: `${pos.y}%` }} title={`${k + 1}. ${o.name}`}>
+            {state === 'now' ? <Icon name="pin" size={16} /> : null}
+          </span>
+        );
+      })}
+      <span className="tm-badge">Parada {index} de {stops.length} · {done} encerradas</span>
+      <span className="tm-note">Mapa esquemático das paradas</span>
+    </div>
+  );
+}
+
 type Dialog = 'map' | 'contact' | 'deliver' | 'occurrence' | null;
 
 function Viagem() {
@@ -192,24 +217,25 @@ function Viagem() {
       {role === 'motorista' && r.status === 'active' && <LocationSharing routeId={r.id} />}
       {error && <div className="banner" role="alert">{error}</div>}
       {info && <div className="banner info" role="status">{info}</div>}
-      <div className="progress"><span>Parada {index} de {stops.length} · {done} encerradas</span><div className="bar-track"><i style={{ width: `${(done / stops.length) * 100}%` }} /></div></div>
+      <StopsMap stops={stops} nextId={next.id} index={index} done={done} />
 
-      <section className="card next">
-        <span className="eyebrow">PRÓXIMA ENTREGA · #{next.id}</span>
+      <section className="card tm-next">
+        <div className="tm-next-top"><span className="eyebrow">Próxima · #{next.id}</span><span className="muted small">{next.window}</span></div>
         <h2>{next.name}</h2>
-        <p>{next.street}, {next.number}{next.complement && ` · ${next.complement}`} — {next.neighborhood}</p>
-        <p className="muted">{next.window}</p>
-        <p>{next.boxes.length} caixa(s) · {volumesOf(next).length} volumes{next.gas ? ` · Fora das caixas: ${next.gas} gás` : ''}</p>
-        {(next.cold > 0 || next.frozen > 0) && <p className="pill blue">{next.cold ? `Caixa do frio: ${next.cold}` : ''}{next.cold && next.frozen ? ' · ' : ''}{next.frozen ? `Congelado: ${next.frozen}` : ''}</p>}
-        {next.notes && <p className="muted"><strong>Observações da entrega:</strong> "{next.notes}"</p>}
+        <p className="muted">{next.street}, {next.number}{next.complement && ` · ${next.complement}`} — {next.neighborhood}</p>
+        <p className="tm-tags">
+          <span className="pill blue">{next.boxes.length} caixa(s) · {volumesOf(next).length} volumes</span>
+          {next.gas > 0 && <span className="pill amber">Fora das caixas: {next.gas} gás</span>}
+          {next.cold > 0 && <span className="pill blue">Caixa do frio: {next.cold}</span>}
+          {next.frozen > 0 && <span className="pill blue">Congelado: {next.frozen}</span>}
+        </p>
+        {next.notes && <p className="tm-obs"><strong>Observações:</strong> "{next.notes}"</p>}
         <div className="actions">
-          <button type="button" onClick={() => setDialog('map')}>Mapa</button>
+          <button type="button" onClick={() => setDialog('map')}>Endereço</button>
           <button type="button" onClick={() => setDialog('contact')}>Falar com o cliente</button>
         </div>
-        <div className="actions">
-          <button type="button" className="primary" onClick={() => setDialog('deliver')}>Concluir entrega</button>
-          <button type="button" className="danger" onClick={() => setDialog('occurrence')}>Não consegui entregar</button>
-        </div>
+        <button type="button" className="primary tm-main" onClick={() => setDialog('deliver')}>Concluir entrega</button>
+        <button type="button" className="danger" onClick={() => setDialog('occurrence')}>Não consegui entregar</button>
         <p className="muted small">{last ? 'Última entrega. Ao concluir, o romaneio será encerrado.' : 'Ao concluir, o sistema simula o aviso ao próximo cliente.'}</p>
       </section>
 
