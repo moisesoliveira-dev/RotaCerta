@@ -166,4 +166,13 @@ export const agentChat = z.object({
   messages: z.array(z.object({ role: z.enum(['user', 'assistant']), text: z.string().trim().min(1).max(4000) })).min(1).max(30)
     .refine((m) => m[m.length - 1].role === 'user', 'A última mensagem precisa ser do usuário.'),
 });
+export const aiSettingsInput = z.object({
+  enabled: z.boolean(),
+  defaultModel: z.enum(AGENT_MODELS),
+  defaultEffort: z.enum(AGENT_EFFORTS),
+  /** Nulo = usa o teto do servidor. Um valor menor reduz o teto; nunca passa dele. */
+  dailyLimit: z.number().int().min(1, 'O limite diário precisa ser de ao menos 1 conversa.').max(100_000).nullable(),
+  companyContext: z.string().trim().max(2000, 'O contexto da empresa aceita até 2000 caracteres.'),
+});
+export type AiSettingsInput = z.infer<typeof aiSettingsInput>;
 export type AgentInput = z.infer<typeof agentInput>;

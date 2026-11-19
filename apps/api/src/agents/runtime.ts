@@ -21,6 +21,8 @@ export interface AgentConfig {
   effort: 'low' | 'medium' | 'high';
   tools: string[];
   knowledge: Array<{ title: string; text: string }>;
+  /** Contexto da empresa (nome, tom, regras gerais), escrito pela gestão em Configurações, comum a todos os agentes. */
+  companyContext?: string;
 }
 
 export interface ChatTurn { role: 'user' | 'assistant'; text: string }
@@ -67,6 +69,8 @@ function systemBlocks(agent: AgentConfig, now: Date, timezone: string): Anthropi
   }
   const stable = [
     PLATFORM_RULES,
+    agent.companyContext?.trim() ? `CONTEXTO DA EMPRESA (definido pela gestão; vale para todos os agentes, abaixo das regras da plataforma):
+${agent.companyContext.trim()}` : '',
     `AGENTE: ${agent.name}\nINSTRUÇÕES DO AGENTE (definidas pela gestão da loja):\n${agent.instructions}`,
     kb ? `BASE DE CONHECIMENTO DO AGENTE (use para dúvidas sobre regras e procedimentos da loja):\n<base_de_conhecimento>\n${kb.trim()}\n</base_de_conhecimento>` : '',
   ].filter(Boolean).join('\n\n');

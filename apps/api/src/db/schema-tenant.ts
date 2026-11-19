@@ -173,3 +173,18 @@ export const agentUsage = pgTable('agent_usage', {
   cacheWriteTokens: bigint('cache_write_tokens', { mode: 'number' }).notNull().default(0),
   outputTokens: bigint('output_tokens', { mode: 'number' }).notNull().default(0),
 }, (t) => [uniqueIndex('agent_usage_day_agent_model_idx').on(t.day, t.agentId, t.model)]);
+
+/**
+ * Ajustes da IA da empresa (uma linha só). A chave da Anthropic NÃO fica aqui: ela é segredo do servidor (ANTHROPIC_API_KEY).
+ * `dailyLimit` nulo usa o teto do servidor; um valor menor só reduz o teto, nunca passa dele.
+ */
+export const aiSettings = pgTable('ai_settings', {
+  id: integer('id').primaryKey().default(1),
+  enabled: boolean('enabled').notNull().default(true),
+  defaultModel: text('default_model').notNull().default('claude-opus-5-5'),
+  defaultEffort: text('default_effort').notNull().default('medium'),
+  dailyLimit: integer('daily_limit'),
+  companyContext: text('company_context').notNull().default(''),
+  updatedBy: text('updated_by').notNull().default(''),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

@@ -171,6 +171,8 @@ Mesmo desenho do projeto de referência (`chatbot-ia/relatorios_automaticos`): o
 - **Configuração:** `ANTHROPIC_API_KEY` na API. Sem ela, a aba funciona para criar e configurar, e a conversa avisa que a IA não está ligada.
 - **Por que não Managed Agents:** as ferramentas precisam rodar dentro da API, no schema da empresa e com o perfil de quem pergunta. Se no futuro houver agentes que trabalhem sozinhos por muito tempo (relatórios agendados, por exemplo), o Claude Managed Agents hospeda o loop e um ambiente isolado.
 
+**Ajustes da IA por empresa (Configurações > Inteligência artificial).** A tabela `ai_settings` (uma linha por empresa) guarda: IA ligada ou desligada, modelo e esforço padrão dos novos agentes, limite diário de conversas e o "contexto da empresa", texto comum que entra nas instruções de todos os agentes, abaixo das regras da plataforma. O limite da empresa só reduz o teto do servidor (`AGENT_DAILY_LIMIT`), nunca o passa. A chave da Anthropic continua só em `ANTHROPIC_API_KEY` no servidor: a tela mostra apenas se ela existe e tem um "Testar conexão" (`POST /api/ai/test`, 5 por minuto, não conta como conversa). Rotas: `GET/PUT /api/ai/settings` (só gestão).
+
 ### 3.16 Rastreio do cliente (link público)
 Na ficha da entrega, a equipe gera um link (`POST /api/orders/:id/tracking-link`) para mandar ao cliente. A página `/#/rastreio/<token>` abre sem login e se atualiza sozinha (`GET /api/public/tracking/:token`, 30/min por IP).
 - **Token:** `empresa.entrega.validade` assinado com HMAC (chave derivada do `JWT_SECRET` com rótulo próprio). Vale 3 dias; empresa suspensa invalida.
